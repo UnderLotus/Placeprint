@@ -95,7 +95,6 @@ describe('Vela search subset', () => {
       reviewCount: 1250,
       address: '1-2-3 Chiyoda',
       category: 'Cafe',
-      priceText: '$$',
       featureId: '0x1111:0x2222',
       placeId: 'ChIJTARGET',
     });
@@ -155,7 +154,6 @@ describe('Vela search subset', () => {
       reviewCount: 1250,
       address: '1-2-3 Chiyoda',
       category: 'Cafe',
-      priceText: '$$',
       featureId: '0x1111:0x2222',
       placeId: 'ChIJTARGET',
     });
@@ -165,7 +163,7 @@ describe('Vela search subset', () => {
       reviewCount: '1250',
       address: '1-2-3 Chiyoda',
       category: 'Cafe',
-      priceText: '$$',
+      priceText: '',
     });
   });
 

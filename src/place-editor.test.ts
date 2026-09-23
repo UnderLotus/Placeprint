@@ -104,7 +104,6 @@ function place(name: string, sourceUrl: string): PlaceInfo {
     reviewCount: 123,
     address: `${name} address`,
     category: '咖啡廳',
-    priceText: '$$',
     weeklyHours: Object.fromEntries(WEEKDAYS.map((weekday) => [weekday, '10:00~20:30'])) as Partial<Record<Weekday, string>>,
   };
 }

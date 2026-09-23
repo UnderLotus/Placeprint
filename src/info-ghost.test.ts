@@ -81,6 +81,14 @@ describe('Ticket18 empty information ghost contract', () => {
   });
 });
 
+describe('Initial preview paint contract', () => {
+  it('matches the empty Canvas photo and information colors before JavaScript renders', () => {
+    const preview = cssRule('#card-preview');
+    expect(preview).toContain('#dcebe8 0 var(--photo-seam)');
+    expect(preview).toContain('var(--paper) var(--photo-seam) 100%');
+  });
+});
+
 describe('Ticket19 transparent QR reveal contract', () => {
   it('declares one clickable paper overlay with ordered ghost and overlay fades', () => {
     expect(indexHtml).toContain('id="info-reveal-overlay"');

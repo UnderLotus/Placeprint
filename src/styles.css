@@ -532,7 +532,11 @@ select:hover {
   aspect-ratio: 1536 / 1919;
   border: 1px solid rgba(18, 54, 60, 0.13);
   border-radius: 12px;
-  background: var(--paper);
+  background: linear-gradient(
+    to bottom,
+    #dcebe8 0 var(--photo-seam),
+    var(--paper) var(--photo-seam) 100%
+  );
   box-shadow: 0 14px 32px rgba(20, 67, 70, 0.16);
 }
 
