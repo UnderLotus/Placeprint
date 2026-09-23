@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="zh-Hant" data-initializing>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/src/styles.css" />
+    <meta
+      name="description"
+      content="將地標跟照片做成回憶的拍立得"
+    />
+    <meta name="application-name" content="Placeprint" />
+    <meta name="apple-mobile-web-app-title" content="Placeprint" />
+    <meta property="og:title" content="地標拍立得 Placeprint" />
+    <meta property="og:site_name" content="地標拍立得 Placeprint" />
+    <meta property="og:description" content="將地標跟照片做成回憶的拍立得" />
+    <meta name="twitter:title" content="地標拍立得 Placeprint" />
+    <meta name="twitter:description" content="將地標跟照片做成回憶的拍立得" />
+    <title>地標拍立得 Placeprint</title>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="site-header">
+        <a class="brand" href="./" aria-label="地標拍立得 Placeprint 首頁">
+          <span class="brand-mark" aria-hidden="true">
+            <span></span><span></span><span></span>
+          </span>
+          <span>
+            <strong>地標拍立得</strong>
+            <small>Placeprint</small>
+          </span>
+        </a>
+        <div id="kofi-widget" class="kofi-widget" aria-label="Ko-fi 贊助入口">
+          <script src="https://storage.ko-fi.com/cdn/widget/Widget_2.js"></script>
+          <script>
+            if (window.kofiwidget2) {
+              window.kofiwidget2.init('Buy me a coffee', '#087f8a', 'H2Y624M8O8');
+              window.kofiwidget2.draw();
+              const widget = document.getElementById('kofi-widget');
+              const decorateLink = () => {
+                const link = widget && widget.querySelector('a.kofi-button');
+                if (!link) {
+                  return false;
+                }
+                link.setAttribute('rel', 'noopener noreferrer');
+                link.setAttribute('aria-label', 'Buy me a coffee on Ko-fi');
+                return true;
+              };
+              if (!decorateLink() && widget) {
+                const observer = new MutationObserver(() => {
+                  if (decorateLink()) {
+                    observer.disconnect();
+                  }
+                });
+                observer.observe(widget, { childList: true, subtree: true });
+              }
+            } else {
+              document.getElementById('kofi-widget')?.setAttribute('data-widget-error', 'true');
+            }
+          </script>
+        </div>
+      </header>
+
+      <main class="workspace" data-editor-open="true">
+        <section class="preview-panel" aria-label="分享卡片預覽">
+
+          <div class="canvas-frame">
+            <div class="canvas-surface">
+              <canvas
+                id="card-preview"
+                width="1536"
+                height="1919"
+                role="img"
+                aria-label="分享卡片預覽"
+              >
+                分享卡片預覽
+              </canvas>
+
+              <button
+                id="photo-picker"
+                class="photo-picker"
+                type="button"
+                aria-label="加入照片"
+              >
+                <span class="photo-picker-mark" aria-hidden="true">＋</span>
+                <strong>加入照片</strong>
+              </button>
+              <button
+                id="replace-photo-button"
+                class="replace-photo-button"
+                type="button"
+                hidden
+              >
+                更換照片
+              </button>
+
+              <div
+                id="photo-pan-target"
+                class="photo-pan-target"
+                role="group"
+                tabindex="0"
+                aria-label="拖曳照片調整構圖"
+                aria-valuetext="縮放 1.00×，可用方向鍵微調位置"
+                hidden
+              ></div>
+              <canvas
+                id="photo-navigator"
+                class="photo-navigator"
+                width="160"
+                height="110"
+                aria-hidden="true"
+                hidden
+              ></canvas>
+
+              <button
+                id="info-hotspot"
+                class="info-hotspot"
+                type="button"
+                aria-expanded="true"
+                aria-controls="editor-panel"
+              >
+                <span id="info-reveal-overlay" class="info-reveal-overlay" aria-hidden="true"></span>
+                <span class="info-hotspot-label">編輯地點資料</span>
+                <span id="info-ghost" class="info-ghost" aria-hidden="true">
+                  <span class="ghost-name">店名</span>
+                  <span class="ghost-line ghost-rating">★ 評分 · 評價數</span>
+                  <span class="ghost-line ghost-category">類別 · 價格帶</span>
+                  <span class="ghost-line ghost-hours">營業時間</span>
+                  <span class="ghost-line ghost-address">地址</span>
+                </span>
+              </button>
+            </div>
+          </div>
+
+          <input
+            id="photo-input"
+            name="photo"
+            type="file"
+            accept="image/*,.heic,.heif"
+            aria-label="選擇卡片照片"
+            hidden
+          />
+
+
+          <div
+            id="manual-export-fallback"
+            class="export-fallback"
+            hidden
+            role="region"
+            aria-label="PNG 手動儲存"
+          >
+            <p>若未自動下載，請點擊下方預覽圖並長按「儲存影像」</p>
+            <a
+              id="manual-export-link"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              開啟 PNG 預覽
+            </a>
+          </div>
+
+          <div class="preview-actions">
+            <p id="status" class="status" role="status" aria-live="polite"></p>
+            <button id="download-button" class="primary-button" type="button">↓下載圖片</button>
+          </div>
+        </section>
+
+        <section id="editor-panel" class="editor-panel" aria-label="地點資料編輯器">
+          <form id="editor-form" class="editor-form">
+              <button id="close-editor-button" class="close-editor-button" type="button">
+                收合編輯器
+              </button>
+
+              <section class="field-section url-section" aria-labelledby="url-title">
+                <div class="section-heading compact">
+                  <h3 id="url-title">從網址自動取得資料</h3>
+                  <p class="field-help">支援 Google 地圖完整網址或分享短網址</p>
+                </div>
+                <div class="url-input-row">
+                  <div class="field-group">
+                    <input
+                      id="maps-url"
+                      aria-label="Google Maps 連結"
+                      name="mapsUrl"
+                      type="text"
+                      inputmode="url"
+                      placeholder="https://www.google.com/maps/place/..."
+                      maxlength="2048"
+                      autocomplete="off"
+                      spellcheck="false"
+                    />
+                  </div>
+                  <p id="maps-url-error" class="field-error" role="alert" aria-live="polite" hidden></p>
+                  <button id="fetch-place-button" class="secondary-button" type="button">
+                    自動抓取資料
+                  </button>
+                </div>
+              </section>
+
+              <section class="field-section" aria-labelledby="details-title">
+                <div class="section-heading compact">
+                  <h3 id="details-title">地點資料</h3>
+                </div>
+
+                <div class="field-grid">
+                  <div class="field-group field-group-wide">
+                    <label for="store-name">店名</label>
+                    <input
+                      id="store-name"
+                      name="storeName"
+                      type="text"
+                      placeholder="Café Sanduhr"
+                      autocomplete="off"
+                    />
+                  </div>
+
+                  <div class="field-group">
+                    <label for="rating">平均評分</label>
+                    <input
+                      id="rating"
+                      name="rating"
+                      type="number"
+                      min="0"
+                      max="5"
+                      step="0.1"
+                      inputmode="decimal"
+                      placeholder="4.1"
+                      autocomplete="off"
+                    />
+                    <p id="rating-error" class="field-error" role="alert" aria-live="polite" hidden></p>
+                  </div>
+
+                  <div class="field-group">
+                    <label for="review-count">評價數</label>
+                    <input
+                      id="review-count"
+                      name="reviewCount"
+                      type="number"
+                      min="0"
+                      max="999999999"
+                      step="1"
+                      inputmode="numeric"
+                      placeholder="291"
+                      autocomplete="off"
+                    />
+                    <p id="review-count-error" class="field-error" role="alert" aria-live="polite" hidden></p>
+                  </div>
+
+                  <div class="field-group">
+                    <label for="category">類別</label>
+                    <input
+                      id="category"
+                      name="category"
+                      type="text"
+                      maxlength="48"
+                      placeholder="咖啡廳"
+                      autocomplete="off"
+                    />
+                  </div>
+
+                  <div class="field-group">
+                    <label for="price-text">價格帶</label>
+                    <input
+                      id="price-text"
+                      name="priceText"
+                      type="text"
+                      maxlength="32"
+                      placeholder="2500~5000￥"
+                      autocomplete="off"
+                    />
+                  </div>
+
+                  <div class="field-group field-group-wide">
+                    <label for="hours-select">營業時間</label>
+                    <select id="hours-select" name="hoursOption"></select>
+                    <input
+                      id="custom-hours"
+                      name="customHours"
+                      type="text"
+                      maxlength="80"
+                      placeholder="平日10:00~20:30"
+                      autocomplete="off"
+                      aria-label="自填營業時間"
+                      hidden
+                    />
+                  </div>
+
+                  <div class="field-group field-group-wide">
+                    <label for="address">地址</label>
+                    <input
+                      id="address"
+                      name="address"
+                      type="text"
+                      placeholder="見滝原市 臨海中央区 水上プロムナード 2-4-10"
+                      autocomplete="street-address"
+                    />
+                  </div>
+
+                  <div class="field-group">
+                    <label for="social-id">社群 ID</label>
+                    <input
+                      id="social-id"
+                      name="socialId"
+                      type="text"
+                      maxlength="64"
+                      placeholder="@underlotus"
+                      autocomplete="off"
+                      spellcheck="false"
+                    />
+                  </div>
+
+                  <div class="field-group">
+                    <label for="qr-code">QR Code</label>
+                    <input
+                      id="qr-code"
+                      name="qrCode"
+                      type="text"
+                      inputmode="url"
+                      placeholder="https://www.google.com/maps/place/..."
+                      autocomplete="off"
+                      spellcheck="false"
+                    />
+                    <p id="qr-code-error" class="field-error" role="alert" aria-live="polite" hidden></p>
+                  </div>
+                </div>
+              </section>
+
+              <button id="clear-data-button" class="clear-data-button" type="button">✗清空資料</button>
+          </form>
+        </section>
+      </main>
+    </div>
+    <script>
+      const initialEditorExpanded = window.matchMedia('(min-width: 960px)').matches;
+      document.querySelector('.workspace').dataset.editorOpen = String(initialEditorExpanded);
+      document.getElementById('info-hotspot').setAttribute('aria-expanded', String(initialEditorExpanded));
+      document.getElementById('editor-panel').hidden = !initialEditorExpanded;
+      document.documentElement.removeAttribute('data-initializing');
+    </script>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

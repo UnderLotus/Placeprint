@@ -1,0 +1,9 @@
+.pi/
+node_modules/
+dist/
+coverage/
+.DS_Store
+.scratch/
+AGENTS.md
+CONTEXT.md
+docs/agents/
