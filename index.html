@@ -31,8 +31,8 @@
   <body>
     <div class="app-shell">
       <header class="site-header">
-        <a class="brand" href="./" aria-label="地標拍立得 Placeprint 首頁">
-          <span class="brand-mark" aria-hidden="true">
+        <a class="brand" href="./">
+          <span class="brand-mark">
             <span></span><span></span><span></span>
           </span>
           <span>
@@ -40,7 +40,7 @@
             <small>Placeprint</small>
           </span>
         </a>
-        <div id="kofi-widget" class="kofi-widget" aria-label="Ko-fi 贊助入口">
+        <div id="kofi-widget" class="kofi-widget">
           <script src="https://storage.ko-fi.com/cdn/widget/Widget_2.js"></script>
           <script>
             if (window.kofiwidget2) {
@@ -55,7 +55,6 @@
                   return false;
                 }
                 link.setAttribute('rel', 'noopener noreferrer');
-                link.setAttribute('aria-label', 'Buy me a coffee on Ko-fi');
                 return true;
               };
               if (!decorateLink() && widget) {
@@ -74,7 +73,7 @@
       </header>
 
       <main class="workspace" data-editor-open="true">
-        <section class="preview-panel" aria-label="分享卡片預覽">
+        <section class="preview-panel">
 
           <div class="canvas-frame">
             <div class="canvas-surface">
@@ -82,8 +81,6 @@
                 id="card-preview"
                 width="1536"
                 height="1919"
-                role="img"
-                aria-label="分享卡片預覽"
               >
                 分享卡片預覽
               </canvas>
@@ -92,9 +89,8 @@
                 id="photo-picker"
                 class="photo-picker"
                 type="button"
-                aria-label="加入照片"
               >
-                <span class="photo-picker-mark" aria-hidden="true">＋</span>
+                <span class="photo-picker-mark">＋</span>
                 <strong>加入照片</strong>
               </button>
               <button
@@ -109,10 +105,6 @@
               <div
                 id="photo-pan-target"
                 class="photo-pan-target"
-                role="group"
-                tabindex="0"
-                aria-label="拖曳照片調整構圖"
-                aria-valuetext="縮放 1.00×，可用方向鍵微調位置"
                 hidden
               ></div>
               <canvas
@@ -120,7 +112,6 @@
                 class="photo-navigator"
                 width="160"
                 height="110"
-                aria-hidden="true"
                 hidden
               ></canvas>
 
@@ -128,12 +119,10 @@
                 id="info-hotspot"
                 class="info-hotspot"
                 type="button"
-                aria-expanded="true"
-                aria-controls="editor-panel"
               >
-                <span id="info-reveal-overlay" class="info-reveal-overlay" aria-hidden="true"></span>
+                <span id="info-reveal-overlay" class="info-reveal-overlay"></span>
                 <span class="info-hotspot-label">編輯地點資料</span>
-                <span id="info-ghost" class="info-ghost" aria-hidden="true">
+                <span id="info-ghost" class="info-ghost">
                   <span class="ghost-name">店名</span>
                   <span class="ghost-line ghost-rating">★ 評分 · 評價數</span>
                   <span class="ghost-line ghost-category">類別 · 價格帶</span>
@@ -149,7 +138,6 @@
             name="photo"
             type="file"
             accept="image/*,.heic,.heif"
-            aria-label="選擇卡片照片"
             hidden
           />
 
@@ -158,8 +146,6 @@
             id="manual-export-fallback"
             class="export-fallback"
             hidden
-            role="region"
-            aria-label="PNG 手動儲存"
           >
             <p>若未自動下載，請點擊下方預覽圖並長按「儲存影像」</p>
             <a
@@ -177,26 +163,24 @@
                 id="theme-picker-trigger"
                 class="theme-picker-trigger action-button"
                 type="button"
-                aria-expanded="false"
-                aria-controls="theme-picker-panel"
                 hidden
               >
                 更換配色
               </button>
               <div id="theme-picker-panel" class="theme-picker-panel" hidden></div>
             </div>
-            <p id="status" class="status" role="status" aria-live="polite"></p>
+            <p id="status" class="status"></p>
             <button id="download-button" class="primary-button action-button" type="button"><span>下載圖片</span></button>
           </div>
         </section>
 
-        <section id="editor-panel" class="editor-panel" aria-label="地點資料編輯器">
+        <section id="editor-panel" class="editor-panel">
           <form id="editor-form" class="editor-form">
               <button id="close-editor-button" class="close-editor-button" type="button">
                 收合編輯器
               </button>
 
-              <section class="field-section url-section" aria-labelledby="url-title">
+              <section class="field-section url-section">
                 <div class="section-heading compact">
                   <h3 id="url-title">從網址自動取得資料</h3>
                   <p class="field-help">支援 Google 地圖完整網址或分享短網址</p>
@@ -205,7 +189,6 @@
                   <div class="field-group">
                     <input
                       id="maps-url"
-                      aria-label="Google Maps 連結"
                       name="mapsUrl"
                       type="text"
                       inputmode="url"
@@ -215,14 +198,14 @@
                       spellcheck="false"
                     />
                   </div>
-                  <p id="maps-url-error" class="field-error" role="alert" aria-live="polite" hidden></p>
+                  <p id="maps-url-error" class="field-error" hidden></p>
                   <button id="fetch-place-button" class="secondary-button" type="button">
                     自動抓取資料
                   </button>
                 </div>
               </section>
 
-              <section class="field-section" aria-labelledby="details-title">
+              <section class="field-section">
                 <div class="section-heading compact">
                   <h3 id="details-title">地點資料</h3>
                 </div>
@@ -252,7 +235,7 @@
                       placeholder="4.1"
                       autocomplete="off"
                     />
-                    <p id="rating-error" class="field-error" role="alert" aria-live="polite" hidden></p>
+                    <p id="rating-error" class="field-error" hidden></p>
                   </div>
 
                   <div class="field-group">
@@ -268,7 +251,7 @@
                       placeholder="291"
                       autocomplete="off"
                     />
-                    <p id="review-count-error" class="field-error" role="alert" aria-live="polite" hidden></p>
+                    <p id="review-count-error" class="field-error" hidden></p>
                   </div>
 
                   <div class="field-group">
@@ -305,7 +288,6 @@
                       maxlength="80"
                       placeholder="平日10:00~20:30"
                       autocomplete="off"
-                      aria-label="自填營業時間"
                       hidden
                     />
                   </div>
@@ -345,12 +327,12 @@
                       autocomplete="off"
                       spellcheck="false"
                     />
-                    <p id="qr-code-error" class="field-error" role="alert" aria-live="polite" hidden></p>
+                    <p id="qr-code-error" class="field-error" hidden></p>
                   </div>
                 </div>
               </section>
 
-              <button id="clear-data-button" class="clear-data-button action-button" type="button"><span class="action-button__icon" aria-hidden="true">✗</span><span>清空資料</span></button>
+              <button id="clear-data-button" class="clear-data-button action-button" type="button"><span class="action-button__icon">✗</span><span>清空資料</span></button>
           </form>
         </section>
       </main>
@@ -358,7 +340,6 @@
     <script>
       const initialEditorExpanded = window.matchMedia('(min-width: 960px)').matches;
       document.querySelector('.workspace').dataset.editorOpen = String(initialEditorExpanded);
-      document.getElementById('info-hotspot').setAttribute('aria-expanded', String(initialEditorExpanded));
       document.getElementById('editor-panel').hidden = !initialEditorExpanded;
       document.documentElement.removeAttribute('data-initializing');
     </script>

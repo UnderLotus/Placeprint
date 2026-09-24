@@ -23,7 +23,7 @@ const fixture = `
   <form id="editor-form">
     <button id="close-editor-button" type="button">close</button>
     <input id="maps-url" name="mapsUrl" maxlength="2048">
-    <p id="maps-url-error" class="field-error" role="alert" aria-live="polite" hidden></p>
+    <p id="maps-url-error" class="field-error" hidden></p>
     <button id="fetch-place-button" type="button">fetch</button>
     <input id="store-name" name="storeName">
     <input id="rating" name="rating" type="number" min="0" max="5" step="0.1">
@@ -288,18 +288,13 @@ describe('DOM-first place editor', () => {
       },
     });
     const controls = elements();
-    controls.url.setAttribute('aria-describedby', 'maps-url-help');
     controls.url.value = 'not a URL';
     dispatch(controls.url, 'input');
     click(controls.fetch);
     await flush();
 
     expect(controls.urlError.hidden).toBe(false);
-    expect(controls.urlError.getAttribute('role')).toBe('alert');
-    expect(controls.urlError.getAttribute('aria-live')).toBe('polite');
     expect(controls.urlError.textContent).toBe('請輸入Google Map網址');
-    expect(controls.url.getAttribute('aria-describedby')).toBe('maps-url-help maps-url-error');
-    expect(controls.url.hasAttribute('aria-invalid')).toBe(false);
     expect(controls.url.validationMessage).toBe('');
     expect(globalStatus).toBe('');
     expect(notices.some((notice) => notice.type === 'status' && notice.error)).toBe(false);
@@ -312,7 +307,6 @@ describe('DOM-first place editor', () => {
 
     controls.url.value = 'https://maps.example/manual';
     dispatch(controls.url, 'input');
-    expect(controls.url.getAttribute('aria-describedby')).toBe('maps-url-help');
     editor.dispose();
   });
 
@@ -351,7 +345,6 @@ describe('DOM-first place editor', () => {
     expect(controls.urlError.hidden).toBe(false);
     editor.reset();
     expect(controls.urlError.hidden).toBe(true);
-    expect(controls.url.getAttribute('aria-describedby')).toBeNull();
     editor.dispose();
   });
 
@@ -779,8 +772,6 @@ describe('DOM-first place editor', () => {
     expect(editor.read().content.hoursText).toBe('');
     expect(controls.urlError.hidden).toBe(false);
     expect(controls.urlError.textContent).toBe('無法取得店家資料，請重試或手動填寫');
-    expect(controls.url.getAttribute('aria-describedby')).toBe('maps-url-error');
-    expect(controls.url.hasAttribute('aria-invalid')).toBe(false);
     expect(controls.url.validationMessage).toBe('');
     expect(notices.some((notice) => notice.type === 'status' && notice.error)).toBe(false);
     editor.dispose();
@@ -793,8 +784,6 @@ describe('DOM-first place editor', () => {
     dispatch(controls.rating, 'input');
     const changesBeforeValidate = notices.filter((notice) => notice.type === 'change').length;
     expect(editor.read().valid).toBe(false);
-    expect(controls.rating.getAttribute('aria-invalid')).toBe('true');
-    expect(controls.rating.getAttribute('aria-describedby')).toBe('rating-error');
     expect((dom.document.querySelector('#rating-error') as unknown as HTMLElement).hidden).toBe(false);
     expect(controls.rating.validationMessage).toBe('評分請輸入 0～5 的數字');
     expect((dom.document.querySelector('#rating-error') as unknown as HTMLElement).textContent).toBe('評分請輸入 0～5 的數字');
@@ -809,7 +798,6 @@ describe('DOM-first place editor', () => {
     controls.rating.value = '0.1';
     dispatch(controls.rating, 'input');
     expect(editor.read().valid).toBe(true);
-    expect(controls.rating.hasAttribute('aria-invalid')).toBe(false);
     expect((dom.document.querySelector('#rating-error') as unknown as HTMLElement).hidden).toBe(true);
     expect(editor.validate()).toBe(true);
     editor.dispose();
@@ -837,7 +825,6 @@ describe('DOM-first place editor', () => {
       // happy-dom reports native stepMismatch for some legal one-decimal values;
       // custom validity and the editor-facing error state remain clear.
       expect(controls.rating.validity.customError, repair).toBe(false);
-      expect(controls.rating.hasAttribute('aria-invalid'), repair).toBe(false);
       expect(controls.ratingError.textContent, repair).toBe('');
       expect(controls.ratingError.hidden, repair).toBe(true);
     }
@@ -873,7 +860,6 @@ describe('DOM-first place editor', () => {
     controls.qr.value = '海'.repeat(1000);
     dispatch(controls.qr, 'input');
     expect(editor.read().valid).toBe(false);
-    expect(controls.qr.getAttribute('aria-invalid')).toBe('true');
     expect(controls.qrError.hidden).toBe(false);
     expect(controls.qr.validationMessage).toBe('QR Code 內容過長，請縮短後再試');
     expect(controls.qrError.textContent).toBe('QR Code 內容過長，請縮短後再試');
@@ -989,7 +975,6 @@ describe('DOM-first place editor', () => {
     controls.customHours.value = 'Safari stale hours';
     controls.urlError.hidden = false;
     controls.urlError.textContent = 'stale error';
-    controls.url.setAttribute('aria-describedby', 'maps-url-error');
     const noticesBeforeRestore = notices.length;
 
     const restored = editor.restore(authoritativeDraft);
@@ -1000,7 +985,6 @@ describe('DOM-first place editor', () => {
     expect(controls.hours.value).toBe('day:星期一');
     expect(controls.customHours.hidden).toBe(true);
     expect(controls.urlError.hidden).toBe(true);
-    expect(controls.url.hasAttribute('aria-describedby')).toBe(false);
     expect(controls.fetch.disabled).toBe(false);
 
     pending.resolve(place('stale lookup result', 'https://maps.example/pending'));

@@ -169,53 +169,21 @@ function cloneWeeklyHours(
     : undefined;
 }
 
-function setDescribedByToken(
-  input: HTMLInputElement,
-  id: string,
-  included: boolean,
-): void {
-  const tokens = (input.getAttribute('aria-describedby') ?? '')
-    .split(/\s+/u)
-    .filter(Boolean);
-  const nextTokens = included
-    ? [...new Set([...tokens, id])]
-    : tokens.filter((token) => token !== id);
-  if (nextTokens.length > 0) {
-    input.setAttribute('aria-describedby', nextTokens.join(' '));
-  } else {
-    input.removeAttribute('aria-describedby');
-  }
-}
-
 function setLookupErrorState(
-  input: HTMLInputElement,
   error: HTMLParagraphElement,
   message: string,
 ): void {
-  const hasMessage = Boolean(message);
-  setDescribedByToken(input, error.id, hasMessage);
   error.textContent = message;
-  error.hidden = !hasMessage;
+  error.hidden = !message;
 }
 
 function setErrorState(
-  input: HTMLInputElement,
   error: HTMLParagraphElement,
   valid: boolean,
   message: string,
 ): void {
-  if (valid) {
-    input.removeAttribute('aria-invalid');
-    input.removeAttribute('aria-describedby');
-    error.hidden = true;
-    error.textContent = '';
-    return;
-  }
-
-  input.setAttribute('aria-invalid', 'true');
-  input.setAttribute('aria-describedby', error.id);
-  error.textContent = message;
-  error.hidden = false;
+  error.textContent = valid ? '' : message;
+  error.hidden = valid;
 }
 
 const GENERIC_FIELD_ERROR = '欄位格式不正確';
@@ -310,7 +278,7 @@ function syncNumberValidity(
 ): void {
   const message = mapNumberValidity(input, kind);
   input.setCustomValidity(message);
-  setErrorState(input, error, !message, message);
+  setErrorState(error, !message, message);
 }
 
 function syncTextValidity(input: HTMLInputElement): void {
@@ -325,7 +293,7 @@ function syncQrCodeValidity(
   const result = createQrCodeResult(input.value);
   const message = result.error ?? mapNativeValidity(input);
   input.setCustomValidity(message);
-  setErrorState(input, error, !message, message);
+  setErrorState(error, !message, message);
 }
 
 function findFirstInvalidField(elements: EditorElements): HTMLElement | null {
@@ -389,7 +357,7 @@ export function mountPlaceEditor(options: MountPlaceEditorOptions): PlaceEditor 
   };
 
   const clearMapsUrlError = (): void => {
-    setLookupErrorState(elements.urlInput, elements.mapsUrlError, '');
+    setLookupErrorState(elements.mapsUrlError, '');
   };
 
   const syncFieldValidity = (): void => {
@@ -656,7 +624,6 @@ export function mountPlaceEditor(options: MountPlaceEditorOptions): PlaceEditor 
         setHoursEditor(undefined);
         syncControlValues();
         setLookupErrorState(
-          elements.urlInput,
           elements.mapsUrlError,
           lookupError instanceof InvalidHttpUrlError
             ? '請輸入Google Map網址'

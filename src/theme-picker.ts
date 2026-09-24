@@ -16,7 +16,7 @@ export interface ThemePickerOptions {
 
 export interface ThemePicker {
   open(): void;
-  close(returnFocus?: boolean): void;
+  close(): void;
   destroy(): void;
 }
 
@@ -28,13 +28,8 @@ export function mountThemePicker(options: ThemePickerOptions): ThemePicker {
   const { document } = window;
   let isOpen = false;
   let destroyed = false;
-  let tabNavigation = false;
-  let pendingOutsideFocus = false;
 
   trigger.type = 'button';
-  if (!panel.id) panel.id = 'theme-picker-panel';
-  trigger.setAttribute('aria-controls', panel.id);
-  trigger.setAttribute('aria-expanded', 'false');
   trigger.hidden = themeOptions.length < 2;
   if (wrapper) wrapper.hidden = themeOptions.length < 2;
   panel.hidden = true;
@@ -45,11 +40,10 @@ export function mountThemePicker(options: ThemePickerOptions): ThemePicker {
     button.type = 'button';
     button.className = 'theme-picker-option';
     button.dataset.themeId = option.id;
-    button.setAttribute('aria-pressed', String(option.id === selectedId()));
+    button.dataset.selected = String(option.id === selectedId());
 
     const swatch = document.createElement('span');
     swatch.className = 'theme-picker-swatch';
-    swatch.setAttribute('aria-hidden', 'true');
     swatch.style.backgroundColor = option.swatch;
 
     const label = document.createElement('span');
@@ -62,10 +56,10 @@ export function mountThemePicker(options: ThemePickerOptions): ThemePicker {
   const optionButtons = (): HTMLButtonElement[] =>
     [...panel.querySelectorAll<HTMLButtonElement>('.theme-picker-option')];
 
-  function updatePressed(): void {
+  function updateSelected(): void {
     const selected = selectedId();
     for (const button of optionButtons()) {
-      button.setAttribute('aria-pressed', String(button.dataset.themeId === selected));
+      button.dataset.selected = String(button.dataset.themeId === selected);
     }
   }
 
@@ -115,44 +109,16 @@ export function mountThemePicker(options: ThemePickerOptions): ThemePicker {
     panel.style.top = String(top - parentRect.top) + 'px';
   }
 
-  function finishOutsidePointer(): void {
-    document.removeEventListener('pointerup', finishOutsidePointer);
-    document.removeEventListener('pointercancel', finishOutsidePointer);
-    if (!pendingOutsideFocus) return;
-    pendingOutsideFocus = false;
-    if (!destroyed && !trigger.hidden) trigger.focus();
-  }
-
   function onDocumentPointerDown(event: PointerEvent): void {
-    tabNavigation = false;
     const target = event.target as Node | null;
     if (target && (trigger.contains(target) || panel.contains(target))) return;
-    close(false);
-    pendingOutsideFocus = true;
-    document.addEventListener('pointerup', finishOutsidePointer, { once: true });
-    document.addEventListener('pointercancel', finishOutsidePointer, { once: true });
+    close();
   }
 
   function onDocumentKeyDown(event: KeyboardEvent): void {
-    if (event.key === 'Tab') {
-      tabNavigation = true;
-      return;
-    }
-    tabNavigation = false;
     if (event.key !== 'Escape') return;
     event.preventDefault();
-    close(true);
-  }
-
-  function onDocumentFocusIn(event: FocusEvent): void {
-    const target = event.target as Node | null;
-    if (target && panel.contains(target)) {
-      tabNavigation = false;
-      return;
-    }
-    if (target === trigger && !tabNavigation) return;
-    tabNavigation = false;
-    close(false);
+    close();
   }
 
   function onViewportChange(): void {
@@ -162,38 +128,31 @@ export function mountThemePicker(options: ThemePickerOptions): ThemePicker {
   function removeOpenListeners(): void {
     document.removeEventListener('pointerdown', onDocumentPointerDown);
     document.removeEventListener('keydown', onDocumentKeyDown);
-    document.removeEventListener('focusin', onDocumentFocusIn);
     window.removeEventListener('resize', onViewportChange);
     window.removeEventListener('scroll', onViewportChange, true);
   }
 
-  function close(returnFocus = false): void {
+  function close(): void {
     if (!isOpen) return;
     isOpen = false;
     panel.hidden = true;
-    trigger.setAttribute('aria-expanded', 'false');
     removeOpenListeners();
-    if (returnFocus && !trigger.hidden) trigger.focus();
   }
 
   function open(): void {
     if (destroyed || themeOptions.length < 2 || isOpen) return;
-    updatePressed();
+    updateSelected();
     isOpen = true;
     panel.hidden = false;
-    trigger.setAttribute('aria-expanded', 'true');
     updatePlacement();
     document.addEventListener('pointerdown', onDocumentPointerDown);
     document.addEventListener('keydown', onDocumentKeyDown);
-    document.addEventListener('focusin', onDocumentFocusIn);
     window.addEventListener('resize', onViewportChange);
     window.addEventListener('scroll', onViewportChange, true);
-    const selected = optionButtons().find((button) => button.getAttribute('aria-pressed') === 'true');
-    (selected ?? optionButtons()[0])?.focus();
   }
 
   function onTriggerClick(): void {
-    if (isOpen) close(false);
+    if (isOpen) close();
     else open();
   }
 
@@ -206,8 +165,8 @@ export function mountThemePicker(options: ThemePickerOptions): ThemePicker {
     try {
       onSelect(id);
     } finally {
-      updatePressed();
-      close(true);
+      updateSelected();
+      close();
     }
   }
 
@@ -219,10 +178,7 @@ export function mountThemePicker(options: ThemePickerOptions): ThemePicker {
     close,
     destroy(): void {
       if (destroyed) return;
-      close(false);
-      pendingOutsideFocus = false;
-      document.removeEventListener('pointerup', finishOutsidePointer);
-      document.removeEventListener('pointercancel', finishOutsidePointer);
+      close();
       destroyed = true;
       trigger.removeEventListener('click', onTriggerClick);
       panel.removeEventListener('click', onPanelClick);

@@ -96,7 +96,6 @@ export function createThemeTransition(options: ThemeTransitionOptions): ThemeTra
       overlay.className = 'theme-transition-overlay';
       overlay.width = canvas.width;
       overlay.height = canvas.height;
-      overlay.setAttribute('aria-hidden', 'true');
       overlay.style.pointerEvents = 'none';
       overlay.style.opacity = '1';
       const context = overlay.getContext('2d');

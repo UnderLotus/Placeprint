@@ -19,7 +19,7 @@ function fixture(
   Object.defineProperty(dom, 'innerHeight', { value: 320, configurable: true });
   dom.document.body.innerHTML = `
     <div id="wrapper">
-      <button id="trigger" type="button" aria-expanded="false" aria-controls="panel">更換配色</button>
+      <button id="trigger" type="button">更換配色</button>
       <div id="panel" hidden></div>
     </div>
     <button id="outside">外部</button>`;
@@ -33,13 +33,14 @@ function fixture(
   trigger.getBoundingClientRect = () => bounds('trigger');
   panel.getBoundingClientRect = () => bounds('panel');
   const selected: string[] = [];
+  let activeId = getSelected();
   const picker = mountThemePicker({
     window: dom as unknown as typeof globalThis.window,
     trigger,
     panel,
     options: activeOptions,
-    selectedId: getSelected,
-    onSelect: (id) => selected.push(id),
+    selectedId: () => activeId,
+    onSelect: (id) => { selected.push(id); activeId = id; },
   });
   return { dom, trigger, panel, outside, picker, selected };
 }
@@ -47,10 +48,9 @@ function fixture(
 afterEach(() => { dom?.close(); });
 
 describe('theme picker', () => {
-  it('renders and opens accessible production theme choices', () => {
-    const { dom, trigger, panel } = fixture(undefined, ACTIVE_THEME_OPTIONS);
+  it('renders and opens production theme choices with the selected theme marked', () => {
+    const { trigger, panel } = fixture(undefined, ACTIVE_THEME_OPTIONS);
     expect(trigger.hidden).toBe(false);
-    expect(trigger.getAttribute('aria-controls')).toBe('panel');
     const buttons = [...panel.querySelectorAll<HTMLButtonElement>('.theme-picker-option')];
     expect(buttons.map((button) => button.dataset.themeId)).toEqual(['nando', 'koubai', 'konjou', 'kincha']);
     expect(buttons.map((button) => button.querySelector('.theme-picker-label')?.textContent)).toEqual(['納戸', '紅梅', '紺青', '金茶']);
@@ -60,39 +60,29 @@ describe('theme picker', () => {
 
     trigger.click();
     const optionButtons = [...panel.querySelectorAll('button')] as unknown as HTMLButtonElement[];
-    expect(trigger.getAttribute('aria-expanded')).toBe('true');
     expect(optionButtons.map((button) => button.textContent)).toEqual(['納戸', '紅梅', '紺青', '金茶']);
-    expect(optionButtons.every((button) => button.getAttribute('role') === null)).toBe(true);
-    expect(optionButtons.map((button) => button.getAttribute('aria-pressed'))).toEqual(['true', 'false', 'false', 'false']);
-    expect(dom.document.activeElement).toBe(optionButtons[0]);
+    expect(optionButtons.map((button) => button.dataset.selected)).toEqual(['true', 'false', 'false', 'false']);
   });
 
-  it('closes on Escape and returns focus to the trigger', () => {
+  it('closes on Escape', () => {
     const { dom, trigger, panel } = fixture();
     trigger.click();
     dom.document.dispatchEvent(new dom.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     expect(panel.hidden).toBe(true);
-    expect(trigger.getAttribute('aria-expanded')).toBe('false');
-    expect(dom.document.activeElement).toBe(trigger);
   });
 
-  it('closes on outside pointerdown and restores focus after the pointer finishes', () => {
+  it('closes on outside pointerdown', () => {
     const { trigger, panel, outside } = fixture();
     trigger.click();
     outside.dispatchEvent(new dom.Event('pointerdown', { bubbles: true }) as unknown as Event);
     expect(panel.hidden).toBe(true);
-    outside.focus();
-    outside.dispatchEvent(new dom.Event('pointerup', { bubbles: true }) as unknown as Event);
-    expect(dom.document.activeElement).toBe(trigger);
   });
 
-  it('lets a trigger click close an open picker without the focus listener reopening it', () => {
+  it('lets a trigger click close an open picker', () => {
     const { trigger, panel } = fixture();
     trigger.click();
-    trigger.focus();
     trigger.click();
     expect(panel.hidden).toBe(true);
-    expect(trigger.getAttribute('aria-expanded')).toBe('false');
   });
 
   it('ignores pointerdown on an option until its click selects and closes', () => {
@@ -104,30 +94,9 @@ describe('theme picker', () => {
     option.click();
     expect(selected).toEqual(['fixture']);
     expect(panel.hidden).toBe(true);
-    expect(dom.document.activeElement).toBe(trigger);
-  });
-
-  it('closes when Tab focus leaves without stealing the outside focus', () => {
-    const { dom, trigger, panel, outside } = fixture();
+    expect([...panel.querySelectorAll<HTMLButtonElement>('.theme-picker-option')].map((button) => button.dataset.selected)).toEqual(['false', 'true']);
     trigger.click();
-    outside.focus();
-    expect(panel.hidden).toBe(true);
-    expect(dom.document.activeElement).toBe(outside);
-  });
-
-  it('closes when reverse Tab focus returns to the trigger without forcing focus', () => {
-    const { dom, trigger, panel } = fixture();
-    trigger.click();
-    dom.document.dispatchEvent(new dom.KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true }));
-    trigger.focus();
-    expect(panel.hidden).toBe(true);
-    expect(dom.document.activeElement).toBe(trigger);
-  });
-
-  it('focuses the first option when there is no valid current selection', () => {
-    const { dom, trigger, panel } = fixture(undefined, options, () => 'missing');
-    trigger.click();
-    expect(dom.document.activeElement).toBe(panel.querySelector('[data-theme-id="nando"]'));
+    expect([...panel.querySelectorAll<HTMLButtonElement>('.theme-picker-option')].map((button) => button.dataset.selected)).toEqual(['false', 'true']);
   });
 
   it('prefers top placement when it fits and clamps both viewport gutters', () => {

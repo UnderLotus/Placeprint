@@ -47,6 +47,19 @@ export interface ShareCardContent {
   qrCode?: string | null;
   hoursText?: string | null;
 }
+
+export type ThemeId = "nando" | "koubai" | "konjou" | "kincha";
+
+export interface ShareCardPalette {
+  photoPlaceholder: string;
+  paper: string;
+  primary: string;
+  rating: string;
+  category: string;
+  hours: string;
+  secondary: string;
+  qr: string;
+}
 ```
 
 卡片渲染時，缺失欄位直接省略，不得產生空白佔位或孤立標點。
@@ -96,10 +109,12 @@ export interface ShareCardContent {
     - 有社群 ID：對齊社群底部（module 底部 `y=1862`，box `y=1617`）。
     - 無社群 ID、有地址：對齊地址滿版槽位（module 底部 `y=1829`，box `y=1584`）。
     - 皆無：上移至基準槽位（module 底部 `y=1777`，box `y=1532`）。
-  - 同步規則：點擊「自動抓取資料」時，QR 欄位為空白便自動帶入目前的原始地圖網址；非空白的手動自訂值不覆蓋。手動清空後，下一次抓取會恢復自動帶入。
+  - 同步規則：自動帶入的 QR 會隨每次抓取的新地圖網址更新；只有非空白的手動輸入才停止同步。手動清空後，下一次抓取恢復自動帶入。
+- **色彩套用**：依據當前選用的主題 Palette 繪製紙張底色、文字、標點與 QR Code，實際照片維持原色。
 
 ## 6. 本機儲存
 
-- **文字與表單狀態**：儲存於 `localStorage`（含原始網址、欄位、營業時間選項、QR override 狀態、裁切參數）。
+- **主題偏好**：Key 為 `placeprint:theme:v1`（`localStorage`）。獨立於店家草稿，首次繪製前讀取套用；點擊「✗清空資料」不重設主題。
+- **店家草稿與表單狀態**：儲存於 `localStorage`（含原始網址、各欄位內容、營業時間選項、QR override 狀態、裁切參數）。
 - **照片**：原始圖片儲存於 `IndexedDB`。
-- 生命週期：重新整理與切換 App 自動還原；下載卡片不清除。點擊「✗清空資料」確認後重置狀態並刪除儲存資料。
+- 生命週期：重新整理與切換 App 自動還原；下載卡片不清除。點擊「✗清空資料」確認後重置店家草稿與照片。真正重新載入頁面時，以 localStorage 草稿為準，避免瀏覽器把已清除的舊表單內容自動帶回。

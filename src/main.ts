@@ -120,7 +120,6 @@ const state: ImageLoadState = {
   loading: false,
 };
 const NAVIGATOR_HIDE_DELAY_MS = 2_000;
-const KEYBOARD_ZOOM_FACTOR = 1.1;
 const EDITOR_REVEAL_SCROLL_DURATION_MS = 840;
 const DESKTOP_EDITOR_MEDIA_QUERY = '(min-width: 960px)';
 const REDUCED_MOTION_MEDIA_QUERY = '(prefers-reduced-motion: reduce)';
@@ -246,14 +245,6 @@ function syncInfoGhost(
   infoHotspot.dataset.hasContent = String(hasFinalContent);
   infoHotspot.dataset.invalid = String(isInvalid);
   infoHotspotLabel.textContent = isInvalid ? '修正地點資料' : '編輯地點資料';
-  infoHotspot.setAttribute(
-    'aria-label',
-    isInvalid
-      ? '修正地點資料，部分欄位需要修正'
-      : hasFinalContent
-        ? '編輯地點資料'
-        : '編輯地點資料，目前尚無可輸出的文字',
-  );
 }
 
 function prefersReducedMotion(): boolean {
@@ -679,10 +670,6 @@ function syncPhotoControls(): void {
     hideNavigator();
   }
   photoPanTarget.dataset.dragging = String(gestureState.pointers.length > 0);
-  photoPanTarget.setAttribute(
-    'aria-valuetext',
-    '縮放 ' + cropState.zoom.toFixed(2) + '×，可用方向鍵微調位置',
-  );
 }
 
 function syncDownloadAvailability(snapshot = placeEditor.read()): void {
@@ -1072,7 +1059,6 @@ function setEditorExpanded(
   cancelEditorRevealScroll();
   editorPanel.hidden = !expanded;
   workspace.dataset.editorOpen = String(expanded);
-  infoHotspot.setAttribute('aria-expanded', String(expanded));
   if (expanded && shouldFocus) {
     const target = focusTarget ?? editorFocusTarget;
     window.setTimeout(() => target.focus({ preventScroll: true }), 0);
@@ -1082,7 +1068,7 @@ function setEditorExpanded(
 }
 
 infoHotspot.addEventListener('click', () => {
-  const expanded = infoHotspot.getAttribute('aria-expanded') === 'true';
+  const expanded = workspace.dataset.editorOpen === 'true';
   if (!expanded && !placeEditor.read().valid) {
     placeEditor.validate();
     return;
@@ -1298,41 +1284,6 @@ photoPanTarget.addEventListener('lostpointercapture', (event) => {
   finishPointer(event.pointerId);
 });
 
-photoPanTarget.addEventListener('keydown', (event) => {
-  if (!state.image || state.loading) {
-    return;
-  }
-  if (event.key === '+' || event.key === '=') {
-    updateCrop({
-      ...cropState,
-      zoom: cropState.zoom * KEYBOARD_ZOOM_FACTOR,
-    });
-    event.preventDefault();
-    return;
-  }
-  if (event.key === '-' || event.key === '_') {
-    updateCrop({
-      ...cropState,
-      zoom: cropState.zoom / KEYBOARD_ZOOM_FACTOR,
-    });
-    event.preventDefault();
-    return;
-  }
-  const step = event.shiftKey ? 96 : 32;
-  const deltas: Record<string, [number, number]> = {
-    ArrowLeft: [-step, 0],
-    ArrowRight: [step, 0],
-    ArrowUp: [0, -step],
-    ArrowDown: [0, step],
-  };
-  const delta = deltas[event.key];
-  if (!delta) {
-    return;
-  }
-  moveCropByCanvasDelta(delta[0], delta[1]);
-  event.preventDefault();
-});
-
 downloadButton.addEventListener('click', async () => {
   if (!placeEditor.validate()) {
     return;
@@ -1374,7 +1325,7 @@ downloadButton.addEventListener('click', async () => {
 
     const exportResult = openPngBlob(
       blob,
-      'share-card.png',
+      'placeprint.png',
       createBrowserExportEnvironment(previewWindow),
     );
     if (!isCurrentExport()) {

@@ -39,9 +39,6 @@
   --canvas-shadow: 0 14px 32px var(--canvas-shadow-color);
   --navigator-shadow-color: rgba(20, 67, 70, 0.18);
   --navigator-shadow: 0 8px 18px var(--navigator-shadow-color);
-  --focus-default: rgba(8, 127, 138, 0.4);
-  --focus-kofi: rgba(8, 127, 138, 0.5);
-  --focus-photo: rgba(8, 127, 138, 0.7);
   --brand-border: rgba(8, 127, 138, 0.32);
   --brand-surface: var(--surface-a58);
   --brand-shadow: rgba(8, 127, 138, 0.1);
@@ -124,9 +121,6 @@ html[data-theme='koubai'] {
   --theme-shadow-color: rgba(70, 40, 50, 0.13);
   --canvas-shadow-color: rgba(70, 40, 50, 0.16);
   --navigator-shadow-color: rgba(70, 40, 50, 0.18);
-  --focus-default: rgba(225, 107, 140, 0.4);
-  --focus-kofi: rgba(225, 107, 140, 0.5);
-  --focus-photo: rgba(225, 107, 140, 0.7);
   --brand-border: rgba(225, 107, 140, 0.32);
   --brand-surface: rgba(255, 252, 253, 0.58);
   --brand-shadow: rgba(225, 107, 140, 0.10);
@@ -198,9 +192,6 @@ html[data-theme='konjou'] {
   --theme-shadow-color: rgba(30, 41, 69, 0.13);
   --canvas-shadow-color: rgba(30, 41, 69, 0.16);
   --navigator-shadow-color: rgba(30, 41, 69, 0.18);
-  --focus-default: rgba(17, 50, 133, 0.4);
-  --focus-kofi: rgba(17, 50, 133, 0.5);
-  --focus-photo: rgba(17, 50, 133, 0.7);
   --brand-border: rgba(17, 50, 133, 0.32);
   --brand-surface: rgba(253, 253, 255, 0.58);
   --brand-shadow: rgba(17, 50, 133, 0.10);
@@ -272,9 +263,6 @@ html[data-theme='kincha'] {
   --theme-shadow-color: rgba(67, 47, 31, 0.13);
   --canvas-shadow-color: rgba(67, 47, 31, 0.16);
   --navigator-shadow-color: rgba(67, 47, 31, 0.18);
-  --focus-default: rgba(199, 128, 45, 0.4);
-  --focus-kofi: rgba(199, 128, 45, 0.5);
-  --focus-photo: rgba(199, 128, 45, 0.7);
   --brand-border: rgba(199, 128, 45, 0.32);
   --brand-surface: rgba(255, 253, 249, 0.58);
   --brand-shadow: rgba(199, 128, 45, 0.10);
@@ -430,24 +418,6 @@ html[data-theme='kincha'] {
 }
 
 @property --navigator-shadow-color {
-  syntax: '<color>';
-  inherits: true;
-  initial-value: transparent;
-}
-
-@property --focus-default {
-  syntax: '<color>';
-  inherits: true;
-  initial-value: transparent;
-}
-
-@property --focus-kofi {
-  syntax: '<color>';
-  inherits: true;
-  initial-value: transparent;
-}
-
-@property --focus-photo {
   syntax: '<color>';
   inherits: true;
   initial-value: transparent;
@@ -773,9 +743,6 @@ html.theme-transitioning {
     --theme-shadow-color 420ms ease-out,
     --canvas-shadow-color 420ms ease-out,
     --navigator-shadow-color 420ms ease-out,
-    --focus-default 420ms ease-out,
-    --focus-kofi 420ms ease-out,
-    --focus-photo 420ms ease-out,
     --brand-border 420ms ease-out,
     --brand-surface 420ms ease-out,
     --brand-shadow 420ms ease-out,
@@ -858,14 +825,6 @@ select {
 
 button {
   touch-action: manipulation;
-}
-
-button:focus-visible,
-input:focus-visible,
-select:focus-visible,
-a:focus-visible {
-  outline: 3px solid var(--focus-default);
-  outline-offset: 3px;
 }
 
 button[hidden],
@@ -979,11 +938,6 @@ button[hidden],
   height: 12px !important;
   margin-right: 4px !important;
   margin-bottom: 0 !important;
-}
-
-.kofi-widget a.kofi-button:focus-visible {
-  outline: 3px solid var(--focus-kofi) !important;
-  outline-offset: 3px !important;
 }
 
 .brand-mark {
@@ -1430,16 +1384,10 @@ select:hover {
   z-index: 2;
   cursor: grab;
   touch-action: none;
-  outline: none;
 }
 
 .photo-pan-target[data-dragging='true'] {
   cursor: grabbing;
-}
-
-.photo-pan-target:focus-visible {
-  outline: 3px solid var(--focus-photo);
-  outline-offset: -4px;
 }
 
 .photo-navigator {
@@ -1473,8 +1421,7 @@ select:hover {
   text-align: left;
 }
 
-.info-hotspot:hover .info-hotspot-label,
-.info-hotspot:focus-visible .info-hotspot-label {
+.info-hotspot:hover .info-hotspot-label {
   background: var(--info-hotspot-hover);
 }
 
@@ -1695,7 +1642,7 @@ select:hover {
 }
 
 .theme-picker-option:hover,
-.theme-picker-option[aria-pressed='true'] {
+.theme-picker-option[data-selected='true'] {
   border-color: var(--theme-line);
   background: var(--control-tint);
 }
