@@ -20,40 +20,6 @@ export interface PanGestureState {
   pinch: PinchGesture | null;
 }
 
-/** Keep the first pointer; this editor intentionally supports single-finger pan only. */
-export function beginPanPointer(
-  active: PanPointer | null,
-  next: PanPointer,
-): PanPointer {
-  return active ?? next;
-}
-
-export function ownsPanPointer(
-  active: PanPointer | null,
-  pointerId: number,
-): boolean {
-  return active?.pointerId === pointerId;
-}
-
-export function updatePanPointer(
-  active: PanPointer | null,
-  pointerId: number,
-  lastClientX: number,
-  lastClientY: number,
-): PanPointer | null {
-  return ownsPanPointer(active, pointerId)
-    ? { pointerId, lastClientX, lastClientY }
-    : active;
-}
-
-/** Only the pointer that began the pan may end it. */
-export function endPanPointer(
-  active: PanPointer | null,
-  pointerId: number,
-): PanPointer | null {
-  return ownsPanPointer(active, pointerId) ? null : active;
-}
-
 export function createPanGestureState(): PanGestureState {
   return { pointers: [], mode: 'idle', pinch: null };
 }

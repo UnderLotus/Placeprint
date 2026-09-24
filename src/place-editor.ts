@@ -88,6 +88,7 @@ export interface PlaceEditor {
   read(): PlaceEditorSnapshot;
   readDraft(): PlaceEditorDraft;
   validate(): boolean;
+  restore(draft: PlaceEditorDraft | null): PlaceEditorSnapshot;
   reset(): PlaceEditorSnapshot;
   dispose(): void;
 }
@@ -532,7 +533,7 @@ export function mountPlaceEditor(options: MountPlaceEditorOptions): PlaceEditor 
     }
   };
 
-  const applyInitialDraft = (draft: PlaceEditorDraft): void => {
+  const applyDraft = (draft: PlaceEditorDraft): void => {
     elements.urlInput.value = draft.sourceUrl;
     elements.storeNameInput.value = draft.originalName;
     elements.ratingInput.value = draft.rating;
@@ -555,29 +556,35 @@ export function mountPlaceEditor(options: MountPlaceEditorOptions): PlaceEditor 
     syncControlValues();
   };
 
-  const reset = (): PlaceEditorSnapshot => {
+  const restore = (draft: PlaceEditorDraft | null): PlaceEditorSnapshot => {
     invalidatePlaceRequest();
     clearMapsUrlError();
-    elements.urlInput.value = '';
-    elements.storeNameInput.value = '';
-    elements.ratingInput.value = '';
-    elements.reviewCountInput.value = '';
-    elements.addressInput.value = '';
-    elements.categoryInput.value = '';
-    elements.priceInput.value = '';
-    elements.socialIdInput.value = '';
-    elements.qrCodeInput.value = '';
-    weeklyHours = undefined;
-    hoursOptions = createHoursOptions();
-    selectedHoursOption = getDefaultHoursOption(hoursOptions);
-    customHoursText = '';
-    qrCodeValue = '';
-    qrCodeOverridden = false;
-    syncHoursControls();
-    syncFieldValidity();
-    syncControlValues();
+    if (draft) {
+      applyDraft(draft);
+    } else {
+      elements.urlInput.value = '';
+      elements.storeNameInput.value = '';
+      elements.ratingInput.value = '';
+      elements.reviewCountInput.value = '';
+      elements.addressInput.value = '';
+      elements.categoryInput.value = '';
+      elements.priceInput.value = '';
+      elements.socialIdInput.value = '';
+      elements.qrCodeInput.value = '';
+      weeklyHours = undefined;
+      hoursOptions = createHoursOptions();
+      selectedHoursOption = getDefaultHoursOption(hoursOptions);
+      customHoursText = '';
+      qrCodeValue = '';
+      qrCodeOverridden = false;
+      syncHoursControls();
+      syncFieldValidity();
+      syncControlValues();
+    }
     return read();
   };
+
+  const reset = (): PlaceEditorSnapshot => restore(null);
 
   const isCurrentRequest = (token: { generation: number; sourceUrl: string }): boolean =>
     !disposed &&
@@ -604,9 +611,10 @@ export function mountPlaceEditor(options: MountPlaceEditorOptions): PlaceEditor 
   };
 
   const syncAutomaticQrCode = (): void => {
-    if (qrCodeOverridden) {
+    if (qrCodeOverridden && elements.qrCodeInput.value.trim() !== '') {
       return;
     }
+    qrCodeOverridden = false;
     qrCodeValue = elements.urlInput.value;
     elements.qrCodeInput.value = qrCodeValue;
     controlValues.set(elements.qrCodeInput, qrCodeValue);
@@ -689,7 +697,7 @@ export function mountPlaceEditor(options: MountPlaceEditorOptions): PlaceEditor 
   };
 
   const onQrInput = (): void => {
-    qrCodeOverridden = true;
+    qrCodeOverridden = elements.qrCodeInput.value.trim() !== '';
     qrCodeValue = elements.qrCodeInput.value;
     syncFieldValidity();
     notifyManualChange('qr-code', elements.qrCodeInput);
@@ -740,9 +748,7 @@ export function mountPlaceEditor(options: MountPlaceEditorOptions): PlaceEditor 
     cleanups.push(() => target.removeEventListener(type, handler));
   };
 
-  if (options.initialDraft) {
-    applyInitialDraft(options.initialDraft);
-  }
+  restore(options.initialDraft ?? null);
 
   listen(elements.urlInput, 'input', onUrlInput);
   listen(elements.fetchPlaceButton, 'click', onFetchPlaceClick);
@@ -767,6 +773,7 @@ export function mountPlaceEditor(options: MountPlaceEditorOptions): PlaceEditor 
     read,
     readDraft,
     validate,
+    restore,
     reset,
     dispose(): void {
       if (disposed) {

@@ -1,4 +1,5 @@
 import type { CropRect } from './photo-crop';
+import type { PreviewPalette } from './theme';
 
 export interface NavigatorContainMapping {
   imageX: number;
@@ -58,4 +59,43 @@ export function mapCropRectToNavigator(
     width: crop.sourceWidth * mapping.scale,
     height: crop.sourceHeight * mapping.scale,
   };
+}
+
+export function drawPhotoNavigator(
+  context: CanvasRenderingContext2D,
+  source: CanvasImageSource,
+  sourceWidth: number,
+  sourceHeight: number,
+  width: number,
+  height: number,
+  mapping: NavigatorContainMapping,
+  cropRect: NavigatorCropRect,
+  palette: PreviewPalette,
+): void {
+  context.clearRect(0, 0, width, height);
+  context.fillStyle = palette.navigatorSurface;
+  context.fillRect(0, 0, width, height);
+  context.imageSmoothingEnabled = true;
+  context.imageSmoothingQuality = 'high';
+  context.drawImage(
+    source,
+    0,
+    0,
+    sourceWidth,
+    sourceHeight,
+    mapping.imageX,
+    mapping.imageY,
+    mapping.imageWidth,
+    mapping.imageHeight,
+  );
+  context.fillStyle = palette.navigatorTint;
+  context.fillRect(
+    mapping.imageX,
+    mapping.imageY,
+    mapping.imageWidth,
+    mapping.imageHeight,
+  );
+  context.strokeStyle = palette.navigatorStroke;
+  context.lineWidth = 2;
+  context.strokeRect(cropRect.x, cropRect.y, cropRect.width, cropRect.height);
 }

@@ -15,6 +15,7 @@ import {
   type QrCodeResult,
 } from './qr-code';
 import { normalizeAndSegment, normalizeWhitespace, segmentGraphemes } from './grapheme';
+import { NANDO_SHARE_CARD_PALETTE, type ShareCardPalette } from './theme';
 
 export const CARD_WIDTH = 1536;
 export const CARD_HEIGHT = 1919;
@@ -151,6 +152,7 @@ export interface RenderTextAnimation {
 export interface ShareCardRenderOptions {
   textAnimation?: RenderTextAnimation;
   qrAnimationProgress?: number;
+  palette?: ShareCardPalette;
 }
 
 export interface RenderPlan {
@@ -309,10 +311,11 @@ export function calculatePhotoCrop(
 function drawPlaceholder(
   context: CanvasRenderingContext2D,
   photo: RenderPlan['photo'],
+  palette: ShareCardPalette,
 ): void {
   // The photo-selection guide belongs to the DOM overlay. Canvas stays
   // final-only so an export with no image contains no editor instructions.
-  context.fillStyle = '#dcebe8';
+  context.fillStyle = palette.photoPlaceholder;
   context.fillRect(photo.x, photo.y, photo.width, photo.height);
 }
 
@@ -321,11 +324,12 @@ function drawPhoto(
   photo: RenderPlan['photo'],
   image: ShareCardImage,
   cropState: CropState,
+  palette: ShareCardPalette,
 ): CoverCrop | undefined {
   const sourceWidth = image.naturalWidth || image.width;
   const sourceHeight = image.naturalHeight || image.height;
   if (sourceWidth <= 0 || sourceHeight <= 0) {
-    drawPlaceholder(context, photo);
+    drawPlaceholder(context, photo, palette);
     return undefined;
   }
 
@@ -346,9 +350,6 @@ function drawPhoto(
     crop.destinationHeight,
   );
   context.restore();
-
-  context.fillStyle = 'rgba(14, 55, 62, 0.08)';
-  context.fillRect(photo.x, photo.y, photo.width, photo.height);
   return crop;
 }
 
@@ -501,7 +502,7 @@ interface DetailSpec {
   color: string;
 }
 
-function createDetailSpecs(place: ShareCardPlaceData): DetailSpec[] {
+function createDetailSpecs(place: ShareCardPlaceData, palette: ShareCardPalette): DetailSpec[] {
   const candidates: DetailSpec[] = [
     {
       kind: 'rating',
@@ -510,7 +511,7 @@ function createDetailSpecs(place: ShareCardPlaceData): DetailSpec[] {
       fontSize: FONT_SIZES.rating,
       lineHeight: LINE_HEIGHTS.rating,
       maxLines: 1,
-      color: '#0a969c',
+      color: palette.rating,
     },
     {
       kind: 'category',
@@ -519,7 +520,7 @@ function createDetailSpecs(place: ShareCardPlaceData): DetailSpec[] {
       fontSize: FONT_SIZES.category,
       lineHeight: LINE_HEIGHTS.category,
       maxLines: 1,
-      color: '#345b61',
+      color: palette.category,
     },
     {
       kind: 'hours',
@@ -528,7 +529,7 @@ function createDetailSpecs(place: ShareCardPlaceData): DetailSpec[] {
       fontSize: FONT_SIZES.hours,
       lineHeight: LINE_HEIGHTS.hours,
       maxLines: 1,
-      color: '#087f8a',
+      color: palette.hours,
     },
     {
       kind: 'address',
@@ -537,7 +538,7 @@ function createDetailSpecs(place: ShareCardPlaceData): DetailSpec[] {
       fontSize: FONT_SIZES.address,
       lineHeight: LINE_HEIGHTS.address,
       maxLines: 2,
-      color: '#547277',
+      color: palette.secondary,
     },
   ];
   return candidates.filter((spec) => Boolean(spec.text));
@@ -610,6 +611,7 @@ function createInfoLayout(
   context: CanvasRenderingContext2D,
   plan: RenderPlan,
   place: ShareCardPlaceData,
+  palette: ShareCardPalette,
 ): InfoLayout {
   const name = prepareStoreName(context, place.storeName);
   plan.name.text = name.text;
@@ -631,11 +633,11 @@ function createInfoLayout(
       fontSize: name.fontSize,
       lineHeight: NAME_LINE_HEIGHT,
       maxLines: 1,
-      color: '#12363c',
+      color: palette.primary,
     }));
   }
 
-  for (const spec of createDetailSpecs(place)) {
+  for (const spec of createDetailSpecs(place, palette)) {
     context.font = spec.font;
     const lines = spec.kind === 'address'
       ? prepareAddress(context, spec.text, BODY_WIDTH).lines
@@ -696,7 +698,7 @@ function createInfoLayout(
       fontSize: FONT_SIZES.social,
       lineHeight: SOCIAL_LINE_HEIGHT,
       maxLines: 1,
-      color: '#547277',
+      color: palette.secondary,
     });
     socialBox.inkMetrics = [{
       ascent: measured.ascent,
@@ -877,8 +879,9 @@ function subtractInkProtection(
 function drawLineBox(
   context: CanvasRenderingContext2D,
   box: RenderLineBox,
-  animation?: RenderTextAnimation,
-  protectedRegions: InkProtectionRegion[] = [],
+  animation: RenderTextAnimation | undefined,
+  protectedRegions: InkProtectionRegion[],
+  paper: string,
 ): void {
   context.save();
   context.fillStyle = box.color;
@@ -953,7 +956,7 @@ function drawLineBox(
     drawFullLine(context, line, box.x, metrics.baseline, 1);
     for (const segment of segments) {
       context.globalAlpha = 1;
-      context.fillStyle = '#fbfbf6';
+      context.fillStyle = paper;
       context.fillRect(maskX, segment.top, maskWidth, segment.bottom - segment.top);
       context.save();
       context.beginPath();
@@ -1012,6 +1015,7 @@ export function renderShareCard(
   context.imageSmoothingEnabled = true;
   context.imageSmoothingQuality = 'high';
   context.clearRect(0, 0, plan.width, plan.height);
+  const palette = options.palette ?? NANDO_SHARE_CARD_PALETTE;
 
   if (content.image) {
     plan.photoCrop = drawPhoto(
@@ -1019,12 +1023,13 @@ export function renderShareCard(
       plan.photo,
       content.image,
       content.crop ?? createCenteredCropState(),
+      palette,
     );
   } else {
-    drawPlaceholder(context, plan.photo);
+    drawPlaceholder(context, plan.photo, palette);
   }
 
-  context.fillStyle = '#fbfbf6';
+  context.fillStyle = palette.paper;
   context.fillRect(
     plan.info.x,
     plan.info.y,
@@ -1032,7 +1037,7 @@ export function renderShareCard(
     plan.info.height,
   );
 
-  plan.infoLayout = createInfoLayout(context, plan, place);
+  plan.infoLayout = createInfoLayout(context, plan, place, palette);
   alignQrCodeToFixedAnchor(plan, plan.infoLayout);
   for (const lineBox of plan.infoLayout.lineBoxes) {
     const protectedRegions = plan.infoLayout.lineBoxes
@@ -1040,13 +1045,14 @@ export function renderShareCard(
       .flatMap((otherBox) => otherBox.inkMetrics.map((metrics, index) =>
         visibleInkRegion(otherBox, index, metrics),
       ));
-    drawLineBox(context, lineBox, options.textAnimation, protectedRegions);
+    drawLineBox(context, lineBox, options.textAnimation, protectedRegions, palette.paper);
   }
   if (plan.qrCodeMatrix && plan.qrCodeBox) {
     drawQrCode(
       context,
       plan.qrCodeMatrix,
       plan.qrCodeBox,
+      palette.qr,
       clampProgress(options.qrAnimationProgress ?? 1),
     );
   }

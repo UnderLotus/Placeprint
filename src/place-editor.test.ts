@@ -152,11 +152,13 @@ function elements(): {
 
 function mount(
   resolvePlace: (sourceUrl: string) => Promise<PlaceInfo>,
+  initialDraft?: PlaceEditorDraft,
 ): { editor: ReturnType<typeof mountPlaceEditor>; notices: PlaceEditorNotice[] } {
   const notices: PlaceEditorNotice[] = [];
   const editor = mountPlaceEditor({
     root: dom.document as unknown as ParentNode,
     resolvePlace,
+    initialDraft,
     onNotice: (notice) => notices.push(notice),
   });
   return { editor, notices };
@@ -173,6 +175,41 @@ afterEach(() => {
 });
 
 describe('DOM-first place editor', () => {
+  it('clears browser-restored control values when mounting without a draft', () => {
+    const controls = elements();
+    controls.url.value = 'https://maps.example/old';
+    controls.name.value = '舊店名';
+    controls.rating.value = '4.8';
+    controls.reviewCount.value = '123';
+    controls.address.value = '舊地址';
+    controls.category.value = '舊類別';
+    controls.price.value = '$$$';
+    controls.social.value = '@old';
+    controls.qr.value = 'https://example.test/old';
+    controls.customHours.value = '舊營業時間';
+
+    const { editor, notices } = mount(async () => place('unused', ''));
+
+    expect(notices).toEqual([]);
+    expect(editor.readDraft()).toMatchObject({
+      sourceUrl: '',
+      originalName: '',
+      rating: '',
+      reviewCount: '',
+      address: '',
+      category: '',
+      priceText: '',
+      selectedHoursOption: 'custom',
+      customHoursText: '',
+      socialId: '',
+      qrCode: '',
+      qrCodeOverridden: false,
+    });
+    expect(controls.name.value).toBe('');
+    expect(controls.hours.value).toBe('custom');
+    editor.dispose();
+  });
+
   it('mounts without an initial notice and returns detached weekly-hours snapshots', async () => {
     const sourceUrl = 'https://maps.example/one';
     const { editor, notices } = mount(async () => place('Cafe', sourceUrl));
@@ -594,12 +631,14 @@ describe('DOM-first place editor', () => {
     editor.dispose();
   });
 
-  it('syncs raw URL on each fetch until the first QR input, including clearing', async () => {
+  it('syncs raw URL on each fetch and treats a cleared QR as automatic again', async () => {
     const first = deferred<PlaceInfo>();
     const second = deferred<PlaceInfo>();
+    const third = deferred<PlaceInfo>();
     const resolver = vi.fn()
       .mockReturnValueOnce(first.promise)
-      .mockReturnValueOnce(second.promise);
+      .mockReturnValueOnce(second.promise)
+      .mockReturnValueOnce(third.promise);
     const { editor } = mount(resolver);
     const controls = elements();
 
@@ -618,12 +657,51 @@ describe('DOM-first place editor', () => {
     second.resolve(place('Second', 'https://maps.example/two'));
     await flush();
 
-    controls.qr.value = '';
+    controls.qr.value = '  ';
     dispatch(controls.qr, 'input');
+    expect(editor.readDraft().qrCodeOverridden).toBe(false);
     controls.url.value = 'https://maps.example/three';
     dispatch(controls.url, 'input');
+    expect(controls.qr.value).toBe('  ');
     click(controls.fetch);
+    expect(controls.qr.value).toBe('https://maps.example/three');
+    expect(editor.readDraft().qrCodeOverridden).toBe(false);
+    third.resolve(place('Third', 'https://maps.example/three'));
+    await flush();
+    editor.dispose();
+  });
+
+  it('repopulates a blank restored QR despite a persisted override flag', async () => {
+    const sourceUrl = 'https://maps.example/restored';
+    const initialDraft: PlaceEditorDraft = {
+      sourceUrl: '',
+      originalName: '',
+      rating: '',
+      reviewCount: '',
+      address: '',
+      category: '',
+      priceText: '',
+      selectedHoursOption: 'custom',
+      customHoursText: '',
+      socialId: '',
+      qrCode: '',
+      qrCodeOverridden: true,
+    };
+    const resolver = vi.fn(async () => place('覺旅咖啡 Journey Kaffe 陽光店', sourceUrl));
+    const { editor } = mount(resolver, initialDraft);
+    const controls = elements();
+
     expect(controls.qr.value).toBe('');
+    expect(editor.readDraft().qrCodeOverridden).toBe(true);
+    controls.url.value = sourceUrl;
+    dispatch(controls.url, 'input');
+    click(controls.fetch);
+
+    expect(controls.qr.value).toBe(sourceUrl);
+    expect(editor.readDraft().qrCodeOverridden).toBe(false);
+    await flush();
+    expect(controls.name.value).toBe('覺旅咖啡 Journey Kaffe 陽光店');
+    expect(editor.read().content.qrCode).toBe(sourceUrl);
     editor.dispose();
   });
 
@@ -737,34 +815,33 @@ describe('DOM-first place editor', () => {
     editor.dispose();
   });
 
-  it('maps every over-precise rating value to the exact Traditional Chinese message', () => {
-    const decimalCases = ['0.01', '1.23', '4.35', '4.999', '5.00'];
-    for (const value of decimalCases) {
-      const { editor } = mount(async () => place('Valid', 'https://maps.example/validity'));
-      const controls = elements();
-      controls.rating.value = value;
-      dispatch(controls.rating, 'input');
-      expect(controls.rating.validationMessage, value).toBe('數字僅接受到小數點第一位');
-      expect(controls.ratingError.textContent, value).toBe('數字僅接受到小數點第一位');
-      editor.dispose();
-    }
-  });
+  it('repairs invalid rating precision with a one-decimal value', () => {
+    const precisionCases = [
+      { invalid: '0.01', repair: '0.0' },
+      { invalid: '1.23', repair: '4.3' },
+      { invalid: '4.35', repair: '5.0' },
+      { invalid: '4.999', repair: '4.3' },
+      { invalid: '5.00', repair: '5.0' },
+    ];
+    const { editor } = mount(async () => place('Valid', 'https://maps.example/validity'));
+    const controls = elements();
 
-  it('accepts rating values with at most one decimal place', () => {
-    const validCases = ['0.0', '4.3', '5.0'];
-    for (const value of validCases) {
-      const { editor } = mount(async () => place('Valid', 'https://maps.example/validity'));
-      const controls = elements();
-      controls.rating.value = value;
+    for (const { invalid, repair } of precisionCases) {
+      controls.rating.value = invalid;
+      dispatch(controls.rating, 'input');
+      expect(controls.rating.validationMessage, invalid).toBe('數字僅接受到小數點第一位');
+      expect(controls.ratingError.textContent, invalid).toBe('數字僅接受到小數點第一位');
+
+      controls.rating.value = repair;
       dispatch(controls.rating, 'input');
       // happy-dom reports native stepMismatch for some legal one-decimal values;
-      // browser validationMessage/checkValidity is covered by the Chromium probe.
-      expect(controls.rating.validity.customError, value).toBe(false);
-      expect(controls.rating.hasAttribute('aria-invalid'), value).toBe(false);
-      expect(controls.ratingError.textContent, value).toBe('');
-      expect(controls.ratingError.hidden, value).toBe(true);
-      editor.dispose();
+      // custom validity and the editor-facing error state remain clear.
+      expect(controls.rating.validity.customError, repair).toBe(false);
+      expect(controls.rating.hasAttribute('aria-invalid'), repair).toBe(false);
+      expect(controls.ratingError.textContent, repair).toBe('');
+      expect(controls.ratingError.hidden, repair).toBe(true);
     }
+    editor.dispose();
   });
 
   it('maps rating range and review validity to exact Traditional Chinese messages', () => {
@@ -873,6 +950,92 @@ describe('DOM-first place editor', () => {
     await flush();
     expect(controls.name.value).toBe('');
     expect(notices.some((notice) => notice.type === 'change' && notice.source === 'lookup-success')).toBe(false);
+    editor.dispose();
+  });
+
+  it('restores an authoritative draft without notices and invalidates pending lookup', async () => {
+    const authoritativeDraft: PlaceEditorDraft = {
+      sourceUrl: 'https://maps.example/authoritative',
+      originalName: '權威店名',
+      rating: '4.5',
+      reviewCount: '45',
+      address: '權威地址',
+      category: '權威類別',
+      priceText: '$$',
+      weeklyHours: { 星期一: '09:00~18:00' },
+      selectedHoursOption: 'day:星期一',
+      customHoursText: '權威自填時間',
+      socialId: '@authoritative',
+      qrCode: 'https://example.test/authoritative',
+      qrCodeOverridden: true,
+    };
+    const pending = deferred<PlaceInfo>();
+    const { editor, notices } = mount(() => pending.promise);
+    const controls = elements();
+    controls.url.value = 'https://maps.example/pending';
+    dispatch(controls.url, 'input');
+    click(controls.fetch);
+    await flush();
+    expect(controls.fetch.disabled).toBe(true);
+
+    controls.name.value = 'Safari stale name';
+    controls.rating.value = '1';
+    controls.reviewCount.value = '1';
+    controls.address.value = 'Safari stale address';
+    controls.category.value = 'Safari stale category';
+    controls.price.value = '$';
+    controls.social.value = '@stale';
+    controls.qr.value = 'https://example.test/stale';
+    controls.customHours.value = 'Safari stale hours';
+    controls.urlError.hidden = false;
+    controls.urlError.textContent = 'stale error';
+    controls.url.setAttribute('aria-describedby', 'maps-url-error');
+    const noticesBeforeRestore = notices.length;
+
+    const restored = editor.restore(authoritativeDraft);
+    expect(notices).toHaveLength(noticesBeforeRestore);
+    expect(restored.content.placeInfo.originalName).toBe('權威店名');
+    expect(editor.readDraft()).toEqual(authoritativeDraft);
+    expect(controls.qr.value).toBe(authoritativeDraft.qrCode);
+    expect(controls.hours.value).toBe('day:星期一');
+    expect(controls.customHours.hidden).toBe(true);
+    expect(controls.urlError.hidden).toBe(true);
+    expect(controls.url.hasAttribute('aria-describedby')).toBe(false);
+    expect(controls.fetch.disabled).toBe(false);
+
+    pending.resolve(place('stale lookup result', 'https://maps.example/pending'));
+    await flush();
+    expect(controls.name.value).toBe(authoritativeDraft.originalName);
+    expect(notices).toHaveLength(noticesBeforeRestore);
+
+    controls.name.value = 'Safari late restoration';
+    controls.rating.value = '2';
+    controls.address.value = 'Safari late address';
+    const noticesBeforeEmptyRestore = notices.length;
+    const empty = editor.restore(null);
+    expect(notices).toHaveLength(noticesBeforeEmptyRestore);
+    expect(empty.content.placeInfo.originalName).toBe('');
+    expect(editor.readDraft()).toMatchObject({
+      sourceUrl: '',
+      originalName: '',
+      rating: '',
+      reviewCount: '',
+      address: '',
+      category: '',
+      priceText: '',
+      weeklyHours: undefined,
+      selectedHoursOption: 'custom',
+      customHoursText: '',
+      socialId: '',
+      qrCode: '',
+      qrCodeOverridden: false,
+    });
+    expect(controls.url.value).toBe('');
+    expect(controls.name.value).toBe('');
+    expect(controls.rating.value).toBe('');
+    expect(controls.address.value).toBe('');
+    expect(controls.hours.value).toBe('custom');
+    expect(controls.customHours.hidden).toBe(false);
     editor.dispose();
   });
 

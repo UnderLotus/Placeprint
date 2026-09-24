@@ -4,6 +4,16 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <script>
+      try {
+        const storedTheme = window.localStorage.getItem('placeprint:theme:v1');
+        if (['nando', 'koubai', 'konjou', 'kincha'].includes(storedTheme)) {
+          document.documentElement.dataset.theme = storedTheme;
+        }
+      } catch {
+        // Storage can be unavailable in private or restricted browsing modes.
+      }
+    </script>
     <link rel="stylesheet" href="/src/styles.css" />
     <meta
       name="description"
@@ -34,7 +44,9 @@
           <script src="https://storage.ko-fi.com/cdn/widget/Widget_2.js"></script>
           <script>
             if (window.kofiwidget2) {
-              window.kofiwidget2.init('Buy me a coffee', '#087f8a', 'H2Y624M8O8');
+              const themeColor = getComputedStyle(document.documentElement)
+                .getPropertyValue('--theme-kofi').trim() || '#087f8a';
+              window.kofiwidget2.init('Buy me a coffee', themeColor, 'H2Y624M8O8');
               window.kofiwidget2.draw();
               const widget = document.getElementById('kofi-widget');
               const decorateLink = () => {
@@ -159,9 +171,22 @@
             </a>
           </div>
 
-          <div class="preview-actions">
+          <div class="preview-actions" data-theme-picker-visible="false">
+            <div id="theme-picker-wrapper" class="theme-picker-wrapper" hidden>
+              <button
+                id="theme-picker-trigger"
+                class="theme-picker-trigger action-button"
+                type="button"
+                aria-expanded="false"
+                aria-controls="theme-picker-panel"
+                hidden
+              >
+                更換配色
+              </button>
+              <div id="theme-picker-panel" class="theme-picker-panel" hidden></div>
+            </div>
             <p id="status" class="status" role="status" aria-live="polite"></p>
-            <button id="download-button" class="primary-button" type="button">↓下載圖片</button>
+            <button id="download-button" class="primary-button action-button" type="button"><span>下載圖片</span></button>
           </div>
         </section>
 
@@ -325,7 +350,7 @@
                 </div>
               </section>
 
-              <button id="clear-data-button" class="clear-data-button" type="button">✗清空資料</button>
+              <button id="clear-data-button" class="clear-data-button action-button" type="button"><span class="action-button__icon" aria-hidden="true">✗</span><span>清空資料</span></button>
           </form>
         </section>
       </main>
@@ -338,5 +363,6 @@
       document.documentElement.removeAttribute('data-initializing');
     </script>
     <script type="module" src="/src/main.ts"></script>
+    <!-- Cloudflare Web Analytics --><script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "d52caa40cd10497c9e8142087fff902b"}'></script><!-- End Cloudflare Web Analytics -->
   </body>
 </html>

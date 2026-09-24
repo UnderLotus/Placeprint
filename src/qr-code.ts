@@ -141,13 +141,14 @@ export function drawQrCode(
   context: CanvasRenderingContext2D,
   matrix: QrCodeMatrix,
   box: QrCodeBox,
+  color: string,
   alpha = 1,
 ): void {
   const progress = Math.min(1, Math.max(0, Number.isFinite(alpha) ? alpha : 1));
   context.save();
   context.imageSmoothingEnabled = false;
   context.globalAlpha = progress;
-  context.fillStyle = '#12363c';
+  context.fillStyle = color;
   const xBoundaries = createQrModuleBoundaries(box.visualX, box.visualSize, matrix.moduleCount);
   const yBoundaries = createQrModuleBoundaries(box.visualY, box.visualSize, matrix.moduleCount);
   for (let row = 0; row < matrix.moduleCount; row += 1) {

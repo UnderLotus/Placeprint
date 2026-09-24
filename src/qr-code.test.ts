@@ -1,6 +1,7 @@
 import qrcode from 'qrcode-generator';
 import { stringToBytes as utf8StringToBytes } from 'qrcode-generator/dist/qrcode_UTF8.mjs';
 import { describe, expect, it } from 'vitest';
+import { NANDO_SHARE_CARD_PALETTE } from './theme';
 import {
   createQrCodeBox,
   createQrCodeMatrix,
@@ -185,10 +186,19 @@ describe('QR Code Canvas seam', () => {
       },
     });
 
-    drawQrCode(context, matrix, box);
+    drawQrCode(context, matrix, box, NANDO_SHARE_CARD_PALETTE.qr);
 
     expect(calls).toHaveLength(matrix.modules.flat().filter(Boolean).length);
-    expect(fillStyles.every((fillStyle) => fillStyle === '#12363c')).toBe(true);
+    expect(fillStyles.every((fillStyle) => fillStyle === NANDO_SHARE_CARD_PALETTE.qr)).toBe(true);
+    const nandoCalls = calls.slice();
+    calls.length = 0;
+    fillStyles.length = 0;
+
+    const alternateColor = 'rgb(17, 34, 51)';
+    drawQrCode(context, matrix, box, alternateColor);
+
+    expect(calls).toEqual(nandoCalls);
+    expect(fillStyles).toEqual(Array(calls.length).fill(alternateColor));
     for (const [x, y, width, height] of calls) {
       expect(Number.isInteger(x)).toBe(true);
       expect(Number.isInteger(y)).toBe(true);

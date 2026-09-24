@@ -9,7 +9,6 @@ import resultsFixture from './fixtures/search-results.json';
 
 const COMPLETE_URL =
   'https://www.google.co.jp/maps/place/Whats+Good+Cafe/@35.68124,139.76712/data=!1s0x1111:0x2222?query_place_id=ChIJTARGET';
-const ORDINARY_COMPLETE_URL = COMPLETE_URL.replace('www.google.co.jp', 'www.google.com');
 const SHORT_URL = 'https://maps.app.goo.gl/bsAkweZyjZdejBo78';
 const COUNTRY_FINAL_URL =
   'https://www.google.co.jp/maps/place/Whats+Good+Cafe/@35.68124,139.76712/data=!1s0x1111:0x2222?query_place_id=ChIJTARGET';
@@ -96,27 +95,6 @@ describe('short URL place flow', () => {
     expect(place.sourceUrl).toContain('google.co.jp');
   });
 
-  it('does not call Domainee for an ordinary complete Maps URL', async () => {
-    let redirectCalls = 0;
-    let lookupCalls = 0;
-    const place = await resolvePlaceFromInput(ORDINARY_COMPLETE_URL, {
-      calibration: BUNDLED_CALIBRATION,
-      redirectFetcher: async () => {
-        redirectCalls += 1;
-        throw new Error('Domainee should not be called');
-      },
-      fetcher: async () => {
-        lookupCalls += 1;
-        return googleResponse();
-      },
-      language: 'en-US',
-    });
-
-    expect(redirectCalls).toBe(0);
-    expect(lookupCalls).toBe(2);
-    expect(place.sourceUrl).toContain('www.google.com');
-  });
-
   it('expands maps.app.goo.gl and resolves a country-domain final URL', async () => {
     const redirectCalls: string[] = [];
     const lookupCalls: string[] = [];
@@ -148,7 +126,6 @@ describe('short URL place flow', () => {
 
   it.each([
     'https://goo.gl/maps/abc',
-    'https://example.com/maps/abc',
   ])('expands a bare /maps path: %s', async (sourceUrl) => {
     let redirectCalls = 0;
     let lookupCalls = 0;

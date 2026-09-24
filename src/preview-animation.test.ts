@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { normalizeAndSegment, normalizeWhitespace } from './grapheme';
 import {
   findPureGraphemeInsertion,
   mapFormattedRangeToLines,
@@ -59,5 +60,15 @@ describe('preview grapheme animation seams', () => {
     expect(mapFormattedRangeToLines(`${'甲'.repeat(27)}乙`, wrappedRange, ['甲'.repeat(27), '乙'])).toEqual([
       { lineIndex: 1, start: 0, end: 1 },
     ]);
+  });
+});
+
+describe('shared grapheme normalization', () => {
+  it('trims and collapses whitespace without changing output graphemes', () => {
+    expect(normalizeWhitespace('  港口\n\t 書店   café  ')).toBe('港口 書店 café');
+    expect(normalizeAndSegment('  港口\n\t 書店   café  ')).toEqual({
+      text: '港口 書店 café',
+      graphemes: ['港', '口', ' ', '書', '店', ' ', 'c', 'a', 'f', 'é'],
+    });
   });
 });

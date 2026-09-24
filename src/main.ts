@@ -59,8 +59,21 @@ import {
 } from './photo-crop';
 import {
   calculateNavigatorContain,
+  drawPhotoNavigator,
   mapCropRectToNavigator,
 } from './photo-navigator';
+import {
+  ACTIVE_THEME_OPTIONS,
+  applyTheme,
+  parseThemeId,
+  readPalettes,
+  readThemePreference,
+  writeThemePreference,
+  type PreviewPalette,
+  type ThemeId,
+} from './theme';
+import { mountThemePicker } from './theme-picker';
+import { createThemeTransition } from './theme-transition';
 import {
   beginGesturePointer,
   cancelGesture,
@@ -88,6 +101,10 @@ const clearDataButton = requireElement<HTMLButtonElement>('#clear-data-button');
 const manualExportFallback = requireElement<HTMLDivElement>('#manual-export-fallback');
 const manualExportLink = requireElement<HTMLAnchorElement>('#manual-export-link');
 const status = requireElement<HTMLParagraphElement>('#status');
+const previewActions = requireElement<HTMLDivElement>('.preview-actions');
+const themePickerWrapper = requireElement<HTMLDivElement>('#theme-picker-wrapper');
+const themePickerTrigger = requireElement<HTMLButtonElement>('#theme-picker-trigger');
+const themePickerPanel = requireElement<HTMLDivElement>('#theme-picker-panel');
 const workspace = requireElement<HTMLElement>('.workspace');
 const editorFocusTarget = requireElement<HTMLInputElement>('#maps-url');
 const editorPanel = requireElement<HTMLElement>('#editor-panel');
@@ -110,6 +127,17 @@ const REDUCED_MOTION_MEDIA_QUERY = '(prefers-reduced-motion: reduce)';
 const MANUAL_PREVIEW_ANIMATION_DURATION_MS = 90;
 
 type InfoRevealPhase = 'lookup' | 'success';
+
+const themeStorage = (() => {
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+})();
+let selectedThemeId: ThemeId = readThemePreference(themeStorage);
+applyTheme(document.documentElement, selectedThemeId);
+let activeThemePalettes = readPalettes(getComputedStyle(document.documentElement));
 
 const draftStorage = (() => {
   try {
@@ -140,6 +168,16 @@ let editorRevealScrollFrame: number | null = null;
 let activeExportCleanup: (() => void) | null = null;
 let exportGeneration = 0;
 const pendingExportPreviewWindows = new Map<Window, number>();
+const themeTransition = createThemeTransition({
+  root: document.documentElement,
+  canvas: previewCanvas,
+  window,
+  reducedMotion: prefersReducedMotion,
+  cancelAnimations: () => {
+    cancelManualPreviewAnimation();
+    clearInfoReveal();
+  },
+});
 
 type StatusSource = 'validation' | 'non-validation';
 
@@ -323,7 +361,11 @@ function scheduleNavigatorHide(): void {
   }, NAVIGATOR_HIDE_DELAY_MS);
 }
 
-function renderNavigator(): void {
+function getActivePalettes() {
+  return readPalettes(getComputedStyle(document.documentElement));
+}
+
+function renderNavigator(palette: PreviewPalette = getActivePalettes().preview): void {
   if (!state.image) {
     hideNavigator();
     return;
@@ -350,32 +392,17 @@ function renderNavigator(): void {
   const crop = calculatePhotoCrop(state.image, cropState, CARD_WIDTH, PHOTO_HEIGHT);
   const cropRect = mapCropRectToNavigator(crop, mapping);
 
-  context.clearRect(0, 0, width, height);
-  context.fillStyle = 'rgba(255, 255, 252, 0.84)';
-  context.fillRect(0, 0, width, height);
-  context.imageSmoothingEnabled = true;
-  context.imageSmoothingQuality = 'high';
-  context.drawImage(
+  drawPhotoNavigator(
+    context,
     source,
-    0,
-    0,
     sourceWidth,
     sourceHeight,
-    mapping.imageX,
-    mapping.imageY,
-    mapping.imageWidth,
-    mapping.imageHeight,
+    width,
+    height,
+    mapping,
+    cropRect,
+    palette,
   );
-  context.fillStyle = 'rgba(8, 127, 138, 0.12)';
-  context.fillRect(
-    mapping.imageX,
-    mapping.imageY,
-    mapping.imageWidth,
-    mapping.imageHeight,
-  );
-  context.strokeStyle = '#087f8a';
-  context.lineWidth = 2;
-  context.strokeRect(cropRect.x, cropRect.y, cropRect.width, cropRect.height);
 }
 
 function showNavigator(): void {
@@ -587,15 +614,19 @@ function renderPreview(
   snapshot = placeEditor.read(),
   options: ShareCardRenderOptions = {},
   preserveManualAnimation = false,
+  palettes = activeThemePalettes,
 ): RenderPlan {
   if (!preserveManualAnimation) {
     cancelManualPreviewAnimation();
   }
   lastPlaceEditorSnapshot = snapshot;
   const content = currentShareCardContent(snapshot);
-  const plan = renderShareCard(previewCanvas, content, options);
+  const plan = renderShareCard(previewCanvas, content, {
+    ...options,
+    palette: palettes.shareCard,
+  });
   syncInfoGhost(content, snapshot);
-  renderNavigator();
+  renderNavigator(palettes.preview);
   return plan;
 }
 
@@ -656,6 +687,36 @@ function syncPhotoControls(): void {
 
 function syncDownloadAvailability(snapshot = placeEditor.read()): void {
   downloadButton.disabled = !canDownload(state) || !snapshot.valid;
+}
+
+function captureThemePalettes(themeId: ThemeId): ReturnType<typeof readPalettes> {
+  const previousThemeId = selectedThemeId;
+  applyTheme(document.documentElement, themeId);
+  const palettes = getActivePalettes();
+  applyTheme(document.documentElement, previousThemeId);
+  // Commit the restored theme before the transition captures its old token values.
+  getComputedStyle(document.documentElement).getPropertyValue('--theme-page');
+  return palettes;
+}
+
+function selectTheme(value: string): void {
+  const themeId = parseThemeId(value);
+  if (!themeId || themeId === selectedThemeId) return;
+
+  // Interruptions intentionally snap to the last selected palette before a fresh snapshot.
+  themeTransition.cancel();
+  const targetPalettes = captureThemePalettes(themeId);
+  themeTransition.start({
+    applyTarget: () => {
+      selectedThemeId = themeId;
+      applyTheme(document.documentElement, themeId);
+      writeThemePreference(themeStorage, themeId);
+      activeThemePalettes = targetPalettes;
+    },
+    renderTarget: () => {
+      renderPreview(lastPlaceEditorSnapshot ?? placeEditor.read(), {}, false, targetPalettes);
+    },
+  });
 }
 
 function clearManualExportFallback(): void {
@@ -1111,6 +1172,17 @@ const placeEditor = mountPlaceEditor({
   },
 });
 
+window.addEventListener('pageshow', (event: PageTransitionEvent) => {
+  if (event.persisted) {
+    return;
+  }
+  const metadata = loadDraftMetadata(draftStorage);
+  const snapshot = placeEditor.restore(metadata?.editor ?? null);
+  lastPlaceEditorSnapshot = snapshot;
+  renderPreview(snapshot);
+  syncDownloadAvailability(snapshot);
+});
+
 function moveCropByCanvasDelta(deltaX: number, deltaY: number): void {
   const dimensions = imageDimensions();
   if (!dimensions) {
@@ -1413,6 +1485,21 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 window.addEventListener('pagehide', persistOnLifecycle);
+
+previewActions.dataset.themePickerVisible = String(ACTIVE_THEME_OPTIONS.length > 1);
+const themePicker = mountThemePicker({
+  window,
+  wrapper: themePickerWrapper,
+  trigger: themePickerTrigger,
+  panel: themePickerPanel,
+  options: ACTIVE_THEME_OPTIONS,
+  selectedId: () => selectedThemeId,
+  onSelect: selectTheme,
+});
+window.addEventListener('pagehide', () => {
+  themePicker.destroy();
+  themeTransition.destroy();
+}, { once: true });
 
 setEditorExpanded(window.matchMedia(DESKTOP_EDITOR_MEDIA_QUERY).matches, null, false);
 syncPhotoControls();

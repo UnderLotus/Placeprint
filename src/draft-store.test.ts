@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { THEME_STORAGE_KEY } from './theme';
 import {
   clearDraftMetadata,
   createDraftPhotoStore,
@@ -31,14 +32,15 @@ const metadata: DraftMetadata = {
 };
 
 function memoryStorage(initial?: string): Storage {
-  let value = initial ?? null;
+  const entries = new Map<string, string>();
+  if (initial !== undefined) entries.set(DRAFT_STORAGE_KEY, initial);
   return {
-    getItem: () => value,
-    setItem: (_key, next) => { value = next; },
-    removeItem: () => { value = null; },
-    clear: () => { value = null; },
-    key: () => null,
-    get length() { return value === null ? 0 : 1; },
+    getItem: (key) => entries.get(key) ?? null,
+    setItem: (key, value) => { entries.set(key, value); },
+    removeItem: (key) => { entries.delete(key); },
+    clear: () => { entries.clear(); },
+    key: (index) => [...entries.keys()][index] ?? null,
+    get length() { return entries.size; },
   } as Storage;
 }
 
@@ -96,8 +98,10 @@ describe('draft-store', () => {
     const storage = memoryStorage();
     expect(saveDraftMetadata(storage, metadata)).toBe(true);
     expect(loadDraftMetadata(storage)).toEqual(metadata);
+    storage.setItem(THEME_STORAGE_KEY, 'kincha');
     expect(clearDraftMetadata(storage)).toBe(true);
     expect(storage.getItem(DRAFT_STORAGE_KEY)).toBeNull();
+    expect(storage.getItem(THEME_STORAGE_KEY)).toBe('kincha');
   });
 
   it('sanitizes crop and invalid hours selections without throwing', () => {
