@@ -12,7 +12,12 @@ export interface RecordedFillText {
   globalAlpha: number;
   font: string;
   fillStyle: string;
+  textAlign: CanvasTextAlign;
   textBaseline: CanvasTextBaseline;
+  shadowColor: string;
+  shadowBlur: number;
+  shadowOffsetX: number;
+  shadowOffsetY: number;
   actualBoundingBoxAscent: number;
   actualBoundingBoxDescent: number;
   clip: RecordedClip | null;
@@ -99,6 +104,13 @@ export function createShareCardCanvas(
     clip: RecordedClip | null;
     fillStyle: string;
     globalAlpha: number;
+    font: string;
+    textAlign: CanvasTextAlign;
+    textBaseline: CanvasTextBaseline;
+    shadowColor: string;
+    shadowBlur: number;
+    shadowOffsetX: number;
+    shadowOffsetY: number;
   }> = [];
 
   const intersectClip = (first: RecordedClip, second: RecordedClip): RecordedClip => {
@@ -120,6 +132,13 @@ export function createShareCardCanvas(
         clip: currentClip ? { ...currentClip } : null,
         fillStyle: String(context.fillStyle),
         globalAlpha: Number(context.globalAlpha),
+        font: String(context.font),
+        textAlign: context.textAlign,
+        textBaseline: context.textBaseline,
+        shadowColor: String(context.shadowColor),
+        shadowBlur: Number(context.shadowBlur),
+        shadowOffsetX: Number(context.shadowOffsetX),
+        shadowOffsetY: Number(context.shadowOffsetY),
       });
     },
     restore: () => {
@@ -130,6 +149,13 @@ export function createShareCardCanvas(
       currentClip = state.clip;
       context.fillStyle = state.fillStyle;
       context.globalAlpha = state.globalAlpha;
+      context.font = state.font;
+      context.textAlign = state.textAlign;
+      context.textBaseline = state.textBaseline;
+      context.shadowColor = state.shadowColor;
+      context.shadowBlur = state.shadowBlur;
+      context.shadowOffsetX = state.shadowOffsetX;
+      context.shadowOffsetY = state.shadowOffsetY;
     },
     beginPath: () => undefined,
     rect: (x: number, y: number, width: number, height: number) => {
@@ -189,7 +215,12 @@ export function createShareCardCanvas(
         globalAlpha: Number(context.globalAlpha),
         font: String(context.font),
         fillStyle: String(context.fillStyle),
+        textAlign: context.textAlign,
         textBaseline: String(context.textBaseline) as CanvasTextBaseline,
+        shadowColor: String(context.shadowColor),
+        shadowBlur: Number(context.shadowBlur),
+        shadowOffsetX: Number(context.shadowOffsetX),
+        shadowOffsetY: Number(context.shadowOffsetY),
         actualBoundingBoxAscent: metrics.actualBoundingBoxAscent,
         actualBoundingBoxDescent: metrics.actualBoundingBoxDescent,
         clip: currentClip ? { ...currentClip } : null,
@@ -201,6 +232,10 @@ export function createShareCardCanvas(
     font: '16px sans-serif',
     textAlign: 'left',
     textBaseline: 'top',
+    shadowColor: 'rgba(0, 0, 0, 0)',
+    shadowBlur: 0,
+    shadowOffsetX: 0,
+    shadowOffsetY: 0,
     globalAlpha: 1,
     imageSmoothingEnabled: false,
     imageSmoothingQuality: 'low',

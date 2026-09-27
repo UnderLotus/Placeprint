@@ -119,10 +119,11 @@
                 id="info-hotspot"
                 class="info-hotspot"
                 type="button"
+                aria-label="編輯資料"
               >
                 <span id="info-reveal-overlay" class="info-reveal-overlay"></span>
-                <span class="info-hotspot-label">編輯地點資料</span>
-                <span id="info-ghost" class="info-ghost">
+                <span class="info-hotspot-label" aria-hidden="true">編輯資料</span>
+                <span id="info-ghost" class="info-ghost" aria-hidden="true">
                   <span class="ghost-name">店名</span>
                   <span class="ghost-line ghost-rating">★ 評分 · 評價數</span>
                   <span class="ghost-line ghost-category">類別 · 價格帶</span>
@@ -304,7 +305,9 @@
                   </div>
 
                   <div class="field-group">
-                    <label for="social-id">社群 ID</label>
+                    <div class="field-label-row">
+                      <label for="social-id">社群 ID</label>
+                    </div>
                     <input
                       id="social-id"
                       name="socialId"
@@ -316,7 +319,44 @@
                     />
                   </div>
 
-                  <div class="field-group">
+                  <div class="field-group timestamp-field">
+                    <div class="field-label-row">
+                      <label for="timestamp-text">時間標記</label>
+                      <button
+                        id="timestamp-position-toggle"
+                        class="timestamp-position-toggle"
+                        type="button"
+                        data-position="right"
+                        aria-label="時間標記位置，目前右下"
+                        aria-pressed="true"
+                      >
+                        <span class="timestamp-position-toggle__option" data-position="left" aria-hidden="true">左下</span>
+                        <span class="timestamp-position-toggle__option" data-position="right" aria-hidden="true">右下</span>
+                        <span class="timestamp-position-toggle__thumb" aria-hidden="true"></span>
+                      </button>
+                    </div>
+                    <input
+                      id="timestamp-text"
+                      name="timestampText"
+                      type="text"
+                      maxlength="20"
+                      placeholder="2011.10.3"
+                      autocomplete="off"
+                    />
+                    <select
+                      id="timestamp-position"
+                      class="timestamp-position-select"
+                      name="timestampPosition"
+                      aria-label="時間標記位置"
+                      aria-hidden="true"
+                      tabindex="-1"
+                    >
+                      <option value="left">左下</option>
+                      <option value="right" selected>右下</option>
+                    </select>
+                  </div>
+
+                  <div class="field-group field-group-wide">
                     <label for="qr-code">QR Code</label>
                     <input
                       id="qr-code"

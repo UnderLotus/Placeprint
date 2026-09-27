@@ -93,6 +93,8 @@ export interface ShareCardContent {
   priceText?: string | null;
   hoursText?: string | null;
   socialId?: string | null;
+  timestampText?: string | null;
+  timestampPosition?: 'left' | 'right';
   qrCode?: string | null;
 }
 
@@ -351,6 +353,29 @@ function drawPhoto(
   );
   context.restore();
   return crop;
+}
+
+function drawTimestampMark(
+  context: CanvasRenderingContext2D,
+  photo: RenderPlan['photo'],
+  text: string,
+  position: 'left' | 'right',
+): void {
+  context.save();
+  context.font = '400 60px "Share Tech Mono", monospace';
+  context.fillStyle = '#fff';
+  context.textAlign = position === 'left' ? 'left' : 'right';
+  context.textBaseline = 'alphabetic';
+  context.shadowColor = 'rgba(0, 0, 0, 0.6)';
+  context.shadowBlur = 4;
+  context.shadowOffsetX = 1;
+  context.shadowOffsetY = 2;
+  context.fillText(
+    text,
+    position === 'left' ? photo.x + 72 : photo.x + photo.width - 72,
+    photo.y + photo.height - 64,
+  );
+  context.restore();
 }
 
 function measureText(
@@ -1027,6 +1052,13 @@ export function renderShareCard(
     );
   } else {
     drawPlaceholder(context, plan.photo, palette);
+  }
+
+  const timestampText = content.timestampText?.trim() ?? '';
+  const imageWidth = content.image?.naturalWidth || content.image?.width || 0;
+  const imageHeight = content.image?.naturalHeight || content.image?.height || 0;
+  if (content.image && imageWidth > 0 && imageHeight > 0 && timestampText) {
+    drawTimestampMark(context, plan.photo, timestampText, content.timestampPosition === 'left' ? 'left' : 'right');
   }
 
   context.fillStyle = palette.paper;

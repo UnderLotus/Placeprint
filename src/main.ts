@@ -74,6 +74,7 @@ import {
 } from './theme';
 import { mountThemePicker } from './theme-picker';
 import { createThemeTransition } from './theme-transition';
+import { createTimestampFontLoader } from './timestamp-font';
 import {
   beginGesturePointer,
   cancelGesture,
@@ -244,7 +245,9 @@ function syncInfoGhost(
   infoGhost.dataset.visible = String(Boolean(revealPhase) || !hasFinalContent);
   infoHotspot.dataset.hasContent = String(hasFinalContent);
   infoHotspot.dataset.invalid = String(isInvalid);
-  infoHotspotLabel.textContent = isInvalid ? '修正地點資料' : '編輯地點資料';
+  const label = isInvalid ? '修正資料' : '編輯資料';
+  infoHotspotLabel.textContent = label;
+  infoHotspot.setAttribute('aria-label', label);
 }
 
 function prefersReducedMotion(): boolean {
@@ -1097,6 +1100,8 @@ function expandEditorForInvalidField(field: HTMLElement): void {
   });
 }
 
+let timestampFontLoader = (_text: string): void => undefined;
+
 const placeEditor = mountPlaceEditor({
   root: document,
   initialDraft: restoredDraftMetadata?.editor,
@@ -1119,6 +1124,9 @@ const placeEditor = mountPlaceEditor({
     }
     if (notice.type === 'change') {
       if (notice.source === 'manual') {
+        if (notice.target === 'timestamp-text' && notice.value.trim()) {
+          timestampFontLoader(notice.value);
+        }
         const previousSnapshot = lastPlaceEditorSnapshot;
         clearInfoReveal();
         const currentPlan = renderPreview(notice.snapshot);
@@ -1158,6 +1166,14 @@ const placeEditor = mountPlaceEditor({
   },
 });
 
+timestampFontLoader = createTimestampFontLoader(document, document.fonts, () => {
+  renderPreview(placeEditor.read());
+});
+const startupTimestamp = placeEditor.read().content.timestampText;
+if (startupTimestamp.trim()) {
+  timestampFontLoader(startupTimestamp);
+}
+
 window.addEventListener('pageshow', (event: PageTransitionEvent) => {
   if (event.persisted) {
     return;
@@ -1165,6 +1181,9 @@ window.addEventListener('pageshow', (event: PageTransitionEvent) => {
   const metadata = loadDraftMetadata(draftStorage);
   const snapshot = placeEditor.restore(metadata?.editor ?? null);
   lastPlaceEditorSnapshot = snapshot;
+  if (snapshot.content.timestampText.trim()) {
+    timestampFontLoader(snapshot.content.timestampText);
+  }
   renderPreview(snapshot);
   syncDownloadAvailability(snapshot);
 });

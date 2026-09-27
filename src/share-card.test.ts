@@ -13,6 +13,54 @@ function line(plan: ReturnType<typeof renderShareCard>, kind: 'name' | 'rating' 
   return plan.infoLayout?.lineBoxes.find((box) => box.kind === kind);
 }
 
+describe('photo timestamp mark', () => {
+  it('draws only nonblank marks over photos with fixed aligned Share Tech Mono styling', () => {
+    const image = { naturalWidth: 1600, naturalHeight: 900, width: 1600, height: 900 };
+    const blank = createShareCardCanvas();
+    renderShareCard(blank.canvas, { image, timestampText: '  ' });
+    expect(blank.recording.fillText.some((call) => call.text === '2011.10.3')).toBe(false);
+
+    const noPhoto = createShareCardCanvas();
+    renderShareCard(noPhoto.canvas, { timestampText: '2011.10.3' });
+    expect(noPhoto.recording.fillText.some((call) => call.text === '2011.10.3')).toBe(false);
+
+    const photoDraws = ['left', 'right'].map((position) => {
+      const fixture = createShareCardCanvas();
+      const plan = renderShareCard(fixture.canvas, {
+        image,
+        timestampText: ' 2011.10.3 ',
+        timestampPosition: position as 'left' | 'right',
+      });
+      const mark = fixture.recording.fillText.find((call) => call.text === '2011.10.3')!;
+      expect(mark).toMatchObject({
+        x: position === 'left' ? 72 : 1464,
+        y: plan.photo.y + plan.photo.height - 64,
+        font: '400 60px "Share Tech Mono", monospace',
+        fillStyle: '#fff',
+        textAlign: position,
+        textBaseline: 'alphabetic',
+        shadowColor: 'rgba(0, 0, 0, 0.6)',
+      });
+      expect(mark.shadowBlur).toBe(4);
+      expect(fixture.context.textAlign).toBe('left');
+      expect(fixture.context.shadowBlur).toBe(0);
+      expect(fixture.recording.drawImage).toHaveLength(1);
+      expect(fixture.context.measureText('W'.repeat(20)).width).toBeLessThan(1392);
+      return fixture.recording.drawImage[0].args;
+    });
+    expect(photoDraws[0]).toEqual(photoDraws[1]);
+
+    const twentyDigits = '01234567890123456789';
+    const twentyDigitFixture = createShareCardCanvas();
+    renderShareCard(twentyDigitFixture.canvas, {
+      image,
+      timestampText: twentyDigits,
+      timestampPosition: 'right',
+    });
+    expect(twentyDigitFixture.recording.fillText.some((call) => call.text === twentyDigits)).toBe(true);
+  });
+});
+
 describe('share-card palette routing', () => {
   const palette = {
     photoPlaceholder: '#102030',

@@ -36,6 +36,11 @@ const fixture = `
     <input id="custom-hours" name="customHours" maxlength="80">
     <input id="address" name="address">
     <input id="social-id" name="socialId" maxlength="64">
+    <input id="timestamp-text" name="timestampText" maxlength="20">
+    <button id="timestamp-position-toggle" type="button" data-position="right" aria-label="時間標記位置，目前右下" aria-pressed="true">
+      <span class="timestamp-position-toggle__option" data-position="left">左下</span><span class="timestamp-position-toggle__option" data-position="right">右下</span><span class="timestamp-position-toggle__thumb"></span>
+    </button>
+    <select id="timestamp-position" name="timestampPosition"><option value="left">左下</option><option value="right" selected>右下</option></select>
     <input id="qr-code" name="qrCode">
     <p id="qr-code-error"></p>
   </form>
@@ -74,6 +79,12 @@ function dispatch(target: EventTarget, type: string): void {
 function click(target: EventTarget): void {
   target.dispatchEvent(
     new dom.MouseEvent('click', { bubbles: true, cancelable: true }) as unknown as Event,
+  );
+}
+
+function keydown(target: EventTarget, key: string): void {
+  target.dispatchEvent(
+    new dom.KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }) as unknown as Event,
   );
 }
 
@@ -121,6 +132,9 @@ function elements(): {
   category: HTMLInputElement;
   price: HTMLInputElement;
   social: HTMLInputElement;
+  timestampText: HTMLInputElement;
+  timestampPosition: HTMLSelectElement;
+  timestampToggle: HTMLButtonElement;
   qr: HTMLInputElement;
   qrError: HTMLElement;
   hours: HTMLSelectElement;
@@ -142,6 +156,9 @@ function elements(): {
     category: get('#category'),
     price: get('#price-text'),
     social: get('#social-id'),
+    timestampText: get('#timestamp-text'),
+    timestampPosition: get('#timestamp-position'),
+    timestampToggle: get('#timestamp-position-toggle'),
     qr: get('#qr-code'),
     qrError: get('#qr-code-error'),
     hours: get('#hours-select'),
@@ -175,6 +192,102 @@ afterEach(() => {
 });
 
 describe('DOM-first place editor', () => {
+  it('reads, changes, resets, and restores timestamp text and position together', () => {
+    const { editor, notices } = mount(async () => place('unused', ''));
+    const controls = elements();
+
+    expect(editor.read().content.timestampPosition).toBe('right');
+    expect(controls.timestampToggle.dataset.position).toBe('right');
+    expect(controls.timestampToggle.getAttribute('aria-label')).toBe('時間標記位置，目前右下');
+    expect(controls.timestampToggle.getAttribute('aria-pressed')).toBe('true');
+    controls.timestampText.value = '  2011.10.3  ';
+    dispatch(controls.timestampText, 'input');
+
+    const leftOption = controls.timestampToggle.querySelector('[data-position="left"]');
+    expect(leftOption).not.toBeNull();
+    click(leftOption as unknown as EventTarget);
+    expect(controls.timestampPosition.value).toBe('left');
+    expect(controls.timestampToggle.dataset.position).toBe('left');
+    expect(controls.timestampToggle.getAttribute('aria-label')).toBe('時間標記位置，目前左下');
+    expect(controls.timestampToggle.getAttribute('aria-pressed')).toBe('false');
+    expect(notices.some((notice) => notice.type === 'change' && notice.target === 'timestamp-position')).toBe(true);
+
+    keydown(controls.timestampToggle, 'ArrowRight');
+    expect(controls.timestampPosition.value).toBe('right');
+    expect(controls.timestampToggle.dataset.position).toBe('right');
+    keydown(controls.timestampToggle, ' ');
+    expect(controls.timestampPosition.value).toBe('left');
+
+    const draft = editor.readDraft();
+    expect(draft.timestampText).toBe('  2011.10.3  ');
+    expect(editor.read().content).toMatchObject({
+      timestampText: '  2011.10.3  ',
+      timestampPosition: 'left',
+    });
+
+    editor.reset();
+    expect(editor.readDraft()).toMatchObject({ timestampText: '', timestampPosition: 'right' });
+    expect(controls.timestampToggle.dataset.position).toBe('right');
+    editor.restore(draft);
+    expect(editor.readDraft()).toMatchObject({ timestampText: '  2011.10.3  ', timestampPosition: 'left' });
+    expect(controls.timestampToggle.dataset.position).toBe('left');
+    editor.dispose();
+  });
+  it('toggles from the button body and selects only the requested option side', () => {
+    const { editor, notices } = mount(async () => place('unused', ''));
+    const controls = elements();
+    const positionChanges = (): PlaceEditorNotice[] =>
+      notices.filter((notice) => notice.type === 'change' && notice.target === 'timestamp-position');
+
+    controls.timestampToggle.click();
+    expect(controls.timestampPosition.value).toBe('left');
+    expect(controls.timestampToggle.dataset.position).toBe('left');
+    expect(controls.timestampToggle.getAttribute('aria-label')).toBe('時間標記位置，目前左下');
+    expect(controls.timestampToggle.getAttribute('aria-pressed')).toBe('false');
+    expect(positionChanges()).toHaveLength(1);
+    expect(positionChanges().at(-1)).toMatchObject({
+      control: controls.timestampPosition,
+      previousValue: 'right',
+      value: 'left',
+    });
+
+    controls.timestampToggle.click();
+    expect(controls.timestampPosition.value).toBe('right');
+    expect(controls.timestampToggle.dataset.position).toBe('right');
+    expect(controls.timestampToggle.getAttribute('aria-label')).toBe('時間標記位置，目前右下');
+    expect(controls.timestampToggle.getAttribute('aria-pressed')).toBe('true');
+    expect(positionChanges()).toHaveLength(2);
+    expect(positionChanges().at(-1)).toMatchObject({
+      control: controls.timestampPosition,
+      previousValue: 'left',
+      value: 'right',
+    });
+
+    const leftOption = controls.timestampToggle.querySelector('[data-position="left"]');
+    const rightOption = controls.timestampToggle.querySelector('[data-position="right"]');
+    expect(leftOption).not.toBeNull();
+    expect(rightOption).not.toBeNull();
+    click(leftOption as unknown as EventTarget);
+    expect(controls.timestampPosition.value).toBe('left');
+    expect(controls.timestampToggle.dataset.position).toBe('left');
+    expect(positionChanges()).toHaveLength(3);
+    click(leftOption as unknown as EventTarget);
+    expect(controls.timestampPosition.value).toBe('left');
+    expect(controls.timestampToggle.dataset.position).toBe('left');
+    expect(positionChanges()).toHaveLength(3);
+
+    click(rightOption as unknown as EventTarget);
+    expect(controls.timestampPosition.value).toBe('right');
+    expect(controls.timestampToggle.dataset.position).toBe('right');
+    expect(positionChanges()).toHaveLength(4);
+    click(rightOption as unknown as EventTarget);
+    expect(controls.timestampPosition.value).toBe('right');
+    expect(controls.timestampToggle.dataset.position).toBe('right');
+    expect(positionChanges()).toHaveLength(4);
+    expect(editor.read().content.timestampPosition).toBe('right');
+    editor.dispose();
+  });
+
   it('clears browser-restored control values when mounting without a draft', () => {
     const controls = elements();
     controls.url.value = 'https://maps.example/old';
@@ -187,6 +300,7 @@ describe('DOM-first place editor', () => {
     controls.social.value = '@old';
     controls.qr.value = 'https://example.test/old';
     controls.customHours.value = '舊營業時間';
+    controls.timestampPosition.value = 'left';
 
     const { editor, notices } = mount(async () => place('unused', ''));
 
@@ -207,6 +321,8 @@ describe('DOM-first place editor', () => {
     });
     expect(controls.name.value).toBe('');
     expect(controls.hours.value).toBe('custom');
+    expect(controls.timestampPosition.value).toBe('right');
+    expect(controls.timestampToggle.dataset.position).toBe('right');
     editor.dispose();
   });
 
@@ -900,6 +1016,8 @@ describe('DOM-first place editor', () => {
       socialId: '@restored',
       qrCode: 'https://example.test/qr',
       qrCodeOverridden: true,
+      timestampText: '',
+      timestampPosition: 'right',
     };
     const pending = deferred<PlaceInfo>();
     const notices: PlaceEditorNotice[] = [];
@@ -913,6 +1031,8 @@ describe('DOM-first place editor', () => {
 
     expect(notices).toEqual([]);
     expect(editor.readDraft()).toEqual(initialDraft);
+    expect(controls.timestampPosition.value).toBe('right');
+    expect(controls.timestampToggle.dataset.position).toBe('right');
     expect(controls.hours.value).toBe('day:星期一');
     expect(controls.customHours.hidden).toBe(true);
 
@@ -954,6 +1074,8 @@ describe('DOM-first place editor', () => {
       socialId: '@authoritative',
       qrCode: 'https://example.test/authoritative',
       qrCodeOverridden: true,
+      timestampText: '',
+      timestampPosition: 'right',
     };
     const pending = deferred<PlaceInfo>();
     const { editor, notices } = mount(() => pending.promise);
@@ -1081,11 +1203,14 @@ describe('DOM-first place editor', () => {
     await flush();
     expect(controls.fetch.disabled).toBe(true);
     const noticeCount = notices.length;
+    const positionBeforeDispose = controls.timestampPosition.value;
 
     editor.dispose();
     editor.dispose();
     controls.url.value = 'https://maps.example/after-dispose';
     dispatch(controls.url, 'input');
+    click(controls.timestampToggle);
+    expect(controls.timestampPosition.value).toBe(positionBeforeDispose);
     pending.resolve(place('late', 'https://maps.example/dispose'));
     await flush();
 

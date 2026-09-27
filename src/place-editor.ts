@@ -22,6 +22,8 @@ export interface PlaceEditorContent {
   hoursText: string;
   qrCode: string;
   socialId: string;
+  timestampText: string;
+  timestampPosition: 'left' | 'right';
 }
 
 /** Raw form state persisted in the local draft. Keep input strings intact. */
@@ -39,6 +41,8 @@ export interface PlaceEditorDraft {
   socialId: string;
   qrCode: string;
   qrCodeOverridden: boolean;
+  timestampText?: string;
+  timestampPosition?: 'left' | 'right';
 }
 
 export interface PlaceEditorSnapshot {
@@ -57,6 +61,8 @@ export type PlaceEditorChangeTarget =
   | 'category'
   | 'price-text'
   | 'social-id'
+  | 'timestamp-text'
+  | 'timestamp-position'
   | 'qr-code'
   | 'hours-select'
   | 'custom-hours';
@@ -117,6 +123,9 @@ interface EditorElements {
   categoryInput: HTMLInputElement;
   priceInput: HTMLInputElement;
   socialIdInput: HTMLInputElement;
+  timestampTextInput: HTMLInputElement;
+  timestampPositionSelect: HTMLSelectElement;
+  timestampPositionToggle: HTMLButtonElement;
   qrCodeInput: HTMLInputElement;
   qrCodeError: HTMLParagraphElement;
   hoursSelect: HTMLSelectElement;
@@ -146,6 +155,9 @@ function collectElements(root: ParentNode): EditorElements {
     categoryInput: requireElement<HTMLInputElement>(root, '#category'),
     priceInput: requireElement<HTMLInputElement>(root, '#price-text'),
     socialIdInput: requireElement<HTMLInputElement>(root, '#social-id'),
+    timestampTextInput: requireElement<HTMLInputElement>(root, '#timestamp-text'),
+    timestampPositionSelect: requireElement<HTMLSelectElement>(root, '#timestamp-position'),
+    timestampPositionToggle: requireElement<HTMLButtonElement>(root, '#timestamp-position-toggle'),
     qrCodeInput: requireElement<HTMLInputElement>(root, '#qr-code'),
     qrCodeError: requireElement<HTMLParagraphElement>(root, '#qr-code-error'),
     hoursSelect: requireElement<HTMLSelectElement>(root, '#hours-select'),
@@ -308,6 +320,7 @@ function findFirstInvalidField(elements: EditorElements): HTMLElement | null {
     elements.customHoursInput,
     elements.addressInput,
     elements.socialIdInput,
+    elements.timestampTextInput,
     elements.qrCodeInput,
   ];
   return controls.find((control) => !control.checkValidity()) ?? null;
@@ -348,6 +361,8 @@ export function mountPlaceEditor(options: MountPlaceEditorOptions): PlaceEditor 
       elements.categoryInput,
       elements.priceInput,
       elements.socialIdInput,
+      elements.timestampTextInput,
+      elements.timestampPositionSelect,
       elements.qrCodeInput,
       elements.hoursSelect,
       elements.customHoursInput,
@@ -368,7 +383,19 @@ export function mountPlaceEditor(options: MountPlaceEditorOptions): PlaceEditor 
     syncTextValidity(elements.priceInput);
     syncTextValidity(elements.customHoursInput);
     syncTextValidity(elements.socialIdInput);
+    syncTextValidity(elements.timestampTextInput);
     syncQrCodeValidity(elements.qrCodeInput, elements.qrCodeError);
+  };
+
+  const readTimestampPosition = (): 'left' | 'right' =>
+    elements.timestampPositionSelect.value === 'left' ? 'left' : 'right';
+
+  const syncTimestampPositionToggle = (): void => {
+    const position = readTimestampPosition();
+    const label = position === 'left' ? '左下' : '右下';
+    elements.timestampPositionToggle.dataset.position = position;
+    elements.timestampPositionToggle.setAttribute('aria-label', '時間標記位置，目前' + label);
+    elements.timestampPositionToggle.setAttribute('aria-pressed', String(position === 'right'));
   };
 
   const syncHoursControls = (): void => {
@@ -437,11 +464,14 @@ export function mountPlaceEditor(options: MountPlaceEditorOptions): PlaceEditor 
 
   const read = (): PlaceEditorSnapshot => {
     syncFieldValidity();
+    syncTimestampPositionToggle();
     const content: PlaceEditorContent = {
       placeInfo: readPlaceInfo(),
       hoursText: selectedHoursText(),
       qrCode: qrCodeValue,
       socialId: elements.socialIdInput.value,
+      timestampText: elements.timestampTextInput.value,
+      timestampPosition: readTimestampPosition(),
     };
     return {
       content,
@@ -449,21 +479,26 @@ export function mountPlaceEditor(options: MountPlaceEditorOptions): PlaceEditor 
     };
   };
 
-  const readDraft = (): PlaceEditorDraft => ({
-    sourceUrl: elements.urlInput.value,
-    originalName: elements.storeNameInput.value,
-    rating: elements.ratingInput.value,
-    reviewCount: elements.reviewCountInput.value,
-    address: elements.addressInput.value,
-    category: elements.categoryInput.value,
-    priceText: elements.priceInput.value,
-    weeklyHours: cloneWeeklyHours(weeklyHours),
-    selectedHoursOption,
-    customHoursText,
-    socialId: elements.socialIdInput.value,
-    qrCode: qrCodeValue,
-    qrCodeOverridden,
-  });
+  const readDraft = (): PlaceEditorDraft => {
+    syncTimestampPositionToggle();
+    return {
+      sourceUrl: elements.urlInput.value,
+      originalName: elements.storeNameInput.value,
+      rating: elements.ratingInput.value,
+      reviewCount: elements.reviewCountInput.value,
+      address: elements.addressInput.value,
+      category: elements.categoryInput.value,
+      priceText: elements.priceInput.value,
+      weeklyHours: cloneWeeklyHours(weeklyHours),
+      selectedHoursOption,
+      customHoursText,
+      socialId: elements.socialIdInput.value,
+      qrCode: qrCodeValue,
+      qrCodeOverridden,
+      timestampText: elements.timestampTextInput.value,
+      timestampPosition: readTimestampPosition(),
+    };
+  };
 
   const notifyLookupChange = (source: 'lookup-success' | 'lookup-failure'): void => {
     emit({
@@ -510,6 +545,9 @@ export function mountPlaceEditor(options: MountPlaceEditorOptions): PlaceEditor 
     elements.categoryInput.value = draft.category;
     elements.priceInput.value = draft.priceText;
     elements.socialIdInput.value = draft.socialId;
+    elements.timestampTextInput.value = typeof draft.timestampText === 'string' ? draft.timestampText : '';
+    elements.timestampPositionSelect.value = draft.timestampPosition === 'left' ? 'left' : 'right';
+    syncTimestampPositionToggle();
     qrCodeValue = draft.qrCode;
     qrCodeOverridden = draft.qrCodeOverridden;
     elements.qrCodeInput.value = qrCodeValue;
@@ -538,6 +576,9 @@ export function mountPlaceEditor(options: MountPlaceEditorOptions): PlaceEditor 
       elements.categoryInput.value = '';
       elements.priceInput.value = '';
       elements.socialIdInput.value = '';
+      elements.timestampTextInput.value = '';
+      elements.timestampPositionSelect.value = 'right';
+      syncTimestampPositionToggle();
       elements.qrCodeInput.value = '';
       weeklyHours = undefined;
       hoursOptions = createHoursOptions();
@@ -663,6 +704,49 @@ export function mountPlaceEditor(options: MountPlaceEditorOptions): PlaceEditor 
     notifyManualChange(target, control);
   };
 
+  const onTimestampPositionChange = (): void => {
+    syncTimestampPositionToggle();
+    onGeneralPlaceInput(elements.timestampPositionSelect, 'timestamp-position');
+  };
+
+  const setTimestampPosition = (position: 'left' | 'right'): void => {
+    if (readTimestampPosition() === position) {
+      syncTimestampPositionToggle();
+      return;
+    }
+    elements.timestampPositionSelect.value = position;
+    onTimestampPositionChange();
+  };
+
+  const onTimestampPositionToggleClick = (event: Event): void => {
+    const eventTarget = event.target as {
+      closest?: (selector: string) => { getAttribute(name: string): string | null } | null;
+    } | null;
+    const option = eventTarget?.closest?.('.timestamp-position-toggle__option[data-position]');
+    const requested = option?.getAttribute('data-position');
+    const nextPosition: 'left' | 'right' = requested === 'left' || requested === 'right'
+      ? requested
+      : readTimestampPosition() === 'left' ? 'right' : 'left';
+    setTimestampPosition(nextPosition);
+  };
+
+  const onTimestampPositionToggleKeyDown = (event: Event): void => {
+    const keyboardEvent = event as KeyboardEvent;
+    let nextPosition: 'left' | 'right' | undefined;
+    if (keyboardEvent.key === 'ArrowLeft') {
+      nextPosition = 'left';
+    } else if (keyboardEvent.key === 'ArrowRight') {
+      nextPosition = 'right';
+    } else if (keyboardEvent.key === 'Enter' || keyboardEvent.key === ' ' || keyboardEvent.key === 'Spacebar') {
+      nextPosition = readTimestampPosition() === 'left' ? 'right' : 'left';
+    }
+    if (!nextPosition) {
+      return;
+    }
+    keyboardEvent.preventDefault();
+    setTimestampPosition(nextPosition);
+  };
+
   const onQrInput = (): void => {
     qrCodeOverridden = elements.qrCodeInput.value.trim() !== '';
     qrCodeValue = elements.qrCodeInput.value;
@@ -726,6 +810,10 @@ export function mountPlaceEditor(options: MountPlaceEditorOptions): PlaceEditor 
   listen(elements.categoryInput, 'input', () => onGeneralPlaceInput(elements.categoryInput, 'category'));
   listen(elements.priceInput, 'input', () => onGeneralPlaceInput(elements.priceInput, 'price-text'));
   listen(elements.socialIdInput, 'input', () => onGeneralPlaceInput(elements.socialIdInput, 'social-id'));
+  listen(elements.timestampTextInput, 'input', () => onGeneralPlaceInput(elements.timestampTextInput, 'timestamp-text'));
+  listen(elements.timestampPositionSelect, 'change', onTimestampPositionChange);
+  listen(elements.timestampPositionToggle, 'click', onTimestampPositionToggleClick);
+  listen(elements.timestampPositionToggle, 'keydown', onTimestampPositionToggleKeyDown);
   listen(elements.qrCodeInput, 'input', onQrInput);
   listen(elements.hoursSelect, 'change', onHoursChange);
   listen(elements.customHoursInput, 'input', onCustomHoursInput);

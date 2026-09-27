@@ -107,6 +107,10 @@ function sanitizeEditor(value: unknown): PlaceEditorDraft | null {
     socialId,
     qrCode,
     qrCodeOverridden: typeof source.qrCodeOverridden === 'boolean' ? source.qrCodeOverridden : false,
+    timestampText: readString(source.timestampText) ?? '',
+    timestampPosition: source.timestampPosition === 'left' || source.timestampPosition === 'right'
+      ? source.timestampPosition
+      : 'right',
   };
 }
 

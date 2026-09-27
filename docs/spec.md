@@ -44,6 +44,8 @@ export interface PlaceInfo {
 export interface ShareCardContent {
   placeInfo?: PlaceInfo | null;
   socialId?: string | null;
+  timestampText?: string | null;
+  timestampPosition?: "left" | "right";
   qrCode?: string | null;
   hoursText?: string | null;
 }
@@ -103,6 +105,11 @@ export interface ShareCardPalette {
 - **營業時間**：字級 40 px。優先顯示平日合併、假日合併或當日選項；「自填」內容留空則隱藏。
 - **地址**：字級 38 px，行高 52 px，寬度上限 1032 px，最多 2 行。超過兩行在第二行尾以 `…` 截斷。
 - **社群 ID**：字級 42 px，`x=128`，可見文字底部對齊 `y=1862`。
+- **時間標記**：
+  - 選填文字，表單 placeholder 為 `2011.10.3`，上限 20 字；空白時不繪製。
+  - 僅在已有照片時繪製於照片區左下或右下，預設右下；距水平邊緣 72 px、照片底部 64 px。左下以左邊界為錨點向右延伸；右下以右邊界為錨點向左延伸，依文字實際寬度貼齊所選邊緣，不使用固定寬度的左對齊文字框。
+  - 使用 Share Tech Mono 400、60 px、白色文字與清楚但克制的深色陰影，呈現相機日期戳風格；不加底板、不改變照片原色。20 字上限須完整落在照片安全邊距內，不做自動縮字或省略。
+  - Share Tech Mono 透過 Google Fonts CSS `https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap` 按需在背景載入；使用者輸入或草稿／頁面還原出非空標記時啟動，始終空白則不發出字體請求。預覽與下載不等待網路：字體尚未完成或載入失敗時先使用 `monospace` fallback，Share Tech Mono 完成後再以最新狀態重繪預覽。
 - **QR Code**：
   - 佔位 `288 × 288`（`x=1184`），內部可見模組 `203 × 203`（`x=1226`），無白底板。
   - 垂直位置錨點：
@@ -115,6 +122,6 @@ export interface ShareCardPalette {
 ## 6. 本機儲存
 
 - **主題偏好**：Key 為 `placeprint:theme:v1`（`localStorage`）。獨立於店家草稿，首次繪製前讀取套用；點擊「✗清空資料」不重設主題。
-- **店家草稿與表單狀態**：儲存於 `localStorage`（含原始網址、各欄位內容、營業時間選項、QR override 狀態、裁切參數）。
+- **店家草稿與表單狀態**：儲存於 `localStorage`（含原始網址、各欄位內容、營業時間選項、時間標記文字與位置、QR override 狀態、裁切參數）。舊草稿缺少時間標記欄位時，預設為空白與右下。
 - **照片**：原始圖片儲存於 `IndexedDB`。
 - 生命週期：重新整理與切換 App 自動還原；下載卡片不清除。點擊「✗清空資料」確認後重置店家草稿與照片。真正重新載入頁面時，以 localStorage 草稿為準，避免瀏覽器把已清除的舊表單內容自動帶回。

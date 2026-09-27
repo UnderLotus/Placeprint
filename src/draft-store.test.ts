@@ -26,6 +26,8 @@ const metadata: DraftMetadata = {
     socialId: '@placeprint',
     qrCode: 'https://example.test/qr',
     qrCodeOverridden: true,
+    timestampText: ' 2011.10.3 ',
+    timestampPosition: 'left',
   },
   crop: { zoom: 2.25, panX: -0.4, panY: 0.7 },
   hasPhoto: true,
@@ -102,6 +104,20 @@ describe('draft-store', () => {
     expect(clearDraftMetadata(storage)).toBe(true);
     expect(storage.getItem(DRAFT_STORAGE_KEY)).toBeNull();
     expect(storage.getItem(THEME_STORAGE_KEY)).toBe('kincha');
+  });
+
+  it('defaults additive timestamp fields for legacy and malformed v1 drafts', () => {
+    const legacyEditor = { ...metadata.editor };
+    delete legacyEditor.timestampText;
+    delete legacyEditor.timestampPosition;
+    const legacy = sanitizeDraftMetadata({ ...metadata, editor: legacyEditor });
+    expect(legacy?.editor).toMatchObject({ timestampText: '', timestampPosition: 'right' });
+
+    const malformed = sanitizeDraftMetadata({
+      ...metadata,
+      editor: { ...metadata.editor, timestampText: 42, timestampPosition: 'middle' },
+    });
+    expect(malformed?.editor).toMatchObject({ timestampText: '', timestampPosition: 'right' });
   });
 
   it('sanitizes crop and invalid hours selections without throwing', () => {
